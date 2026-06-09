@@ -1,5 +1,5 @@
 # Tutu Brand — Environment Visual Library
-> Prompts optimized for **Seedance 2.0** · Skill: `higgsfield-generate`
+> Prompts optimized for **Seedance 2.0**
 
 ---
 
