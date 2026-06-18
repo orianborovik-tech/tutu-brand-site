@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TUTU // מרכז הבקרה</title>
+<style>
+  :root{
+    --gold:#f5c542;
+    --gold-soft:#ffe08a;
+    --cyan:#3fe0d0;
+    --green:#7dff9b;
+    --bg:#03100e;
+    --bg2:#06201c;
+    --line:rgba(63,224,208,.28);
+    --line-strong:rgba(245,197,66,.55);
+    --txt:#cdeee8;
+    --danger:#ff5c6c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Segoe UI",system-ui,Tahoma,sans-serif;
+    background:
+      radial-gradient(1200px 700px at 70% -10%, rgba(245,197,66,.07), transparent 60%),
+      radial-gradient(900px 600px at 10% 110%, rgba(63,224,208,.10), transparent 55%),
+      var(--bg);
+    color:var(--txt);
+    overflow:hidden;
+    height:100vh;
+  }
+  /* scanline + grid overlay */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:9;
+    background:
+      linear-gradient(rgba(63,224,208,.035) 1px, transparent 1px) 0 0/100% 3px,
+      linear-gradient(90deg, transparent 0 49.5%, rgba(245,197,66,.04) 50%, transparent 50.5% 100%) 0 0/40px 100%;
+    mix-blend-mode:screen;
+  }
+  body::after{
+    content:"";position:fixed;left:0;right:0;height:140px;top:-140px;z-index:8;pointer-events:none;
+    background:linear-gradient(rgba(63,224,208,.12),transparent);
+    animation:scan 6s linear infinite;
+  }
+  @keyframes scan{to{top:100%}}
+
+  /* boot screen */
+  #boot{
+    position:fixed;inset:0;z-index:50;background:var(--bg);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+    transition:opacity .8s ease;
+  }
+  #boot .ring{
+    width:120px;height:120px;border-radius:50%;
+    border:2px solid rgba(245,197,66,.25);border-top-color:var(--gold);
+    animation:spin 1s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #boot .log{font-family:"Consolas",monospace;font-size:13px;color:var(--cyan);min-height:120px;width:340px;text-align:right}
+  #boot .log b{color:var(--gold)}
+  #boot h1{letter-spacing:8px;color:var(--gold);font-weight:300}
+
+  .wrap{display:grid;grid-template-rows:auto 1fr auto;height:100vh;padding:14px 18px;gap:12px}
+
+  header.bar{
+    display:flex;align-items:center;justify-content:space-between;
+    border:1px solid var(--line);padding:10px 16px;border-radius:10px;
+    background:linear-gradient(90deg, rgba(63,224,208,.06), rgba(245,197,66,.04));
+    backdrop-filter:blur(2px);
+  }
+  .brand{display:flex;align-items:center;gap:14px}
+  .brand .mark{
+    width:34px;height:34px;border-radius:50%;
+    background:radial-gradient(circle at 50% 50%, var(--gold-soft), var(--gold) 40%, transparent 72%);
+    box-shadow:0 0 18px var(--gold);animation:pulse 2.6s ease-in-out infinite;
+  }
+  @keyframes pulse{50%{transform:scale(1.12);filter:brightness(1.25)}}
+  .brand h1{font-size:18px;letter-spacing:6px;font-weight:400;color:#fff}
+  .brand h1 span{color:var(--gold)}
+  .bar .right{display:flex;gap:22px;align-items:center;font-family:"Consolas",monospace;font-size:12px}
+  .bar .right .k{color:var(--cyan);opacity:.7}
+  .bar .right .v{color:var(--gold-soft)}
+  #clock{font-size:20px;color:#fff;letter-spacing:2px}
+
+  .grid{display:grid;grid-template-columns:1.1fr 1.4fr 1.1fr;gap:12px;min-height:0}
+
+  .panel{
+    border:1px solid var(--line);border-radius:12px;padding:14px;position:relative;
+    background:linear-gradient(180deg, rgba(6,32,28,.6), rgba(3,16,14,.6));
+    display:flex;flex-direction:column;gap:12px;min-height:0;overflow:hidden;
+  }
+  .panel::before{
+    content:"";position:absolute;inset:0;border-radius:12px;padding:1px;pointer-events:none;
+    background:linear-gradient(135deg, var(--line-strong), transparent 40%, transparent 60%, var(--line-strong));
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;opacity:.5;
+  }
+  .panel .corner{position:absolute;width:12px;height:12px;border:2px solid var(--gold);opacity:.6}
+  .corner.tl{top:6px;right:6px;border-left:0;border-bottom:0}
+  .corner.tr{top:6px;left:6px;border-right:0;border-bottom:0}
+  .corner.bl{bottom:6px;right:6px;border-left:0;border-top:0}
+  .corner.br{bottom:6px;left:6px;border-right:0;border-top:0}
+
+  .panel h2{
+    font-size:12px;letter-spacing:3px;color:var(--cyan);font-weight:500;text-transform:uppercase;
+    display:flex;align-items:center;gap:8px;
+  }
+  .panel h2::before{content:"▸";color:var(--gold)}
+
+  /* arc reactor */
+  .reactor{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:14px}
+  .core{position:relative;width:200px;height:200px}
+  .core .r{position:absolute;border-radius:50%;inset:0;border:1px solid rgba(63,224,208,.4)}
+  .core .r2{inset:18px;border:2px dashed rgba(245,197,66,.45);animation:spin 9s linear infinite}
+  .core .r3{inset:40px;border:1px solid rgba(125,255,155,.4);animation:spin 6s linear infinite reverse}
+  .core .glow{
+    position:absolute;inset:62px;border-radius:50%;
+    background:radial-gradient(circle, #fff, var(--gold-soft) 30%, var(--gold) 55%, rgba(245,197,66,0) 75%);
+    box-shadow:0 0 40px var(--gold),0 0 80px rgba(245,197,66,.5);
+    animation:pulse 2.2s ease-in-out infinite;
+  }
+  .core .seg{position:absolute;inset:50px;border-radius:50%;border-top:3px solid var(--cyan);animation:spin 3s linear infinite}
+  .readout{font-family:"Consolas",monospace;font-size:12px;text-align:center;line-height:1.7}
+  .readout b{color:var(--gold);font-size:22px}
+
+  /* radar */
+  .radar{position:relative;width:230px;height:230px;align-self:center;border-radius:50%;border:1px solid var(--line);
+    background:repeating-radial-gradient(circle at center, transparent 0 27px, rgba(63,224,208,.10) 28px 29px)}
+  .radar .sweep{
+    position:absolute;inset:0;border-radius:50%;
+    background:conic-gradient(from 0deg, rgba(125,255,155,.45), transparent 55%);
+    animation:spin 3.5s linear infinite;
+  }
+  .radar .cross,.radar .cross2{position:absolute;background:var(--line)}
+  .radar .cross{left:50%;top:0;bottom:0;width:1px}
+  .radar .cross2{top:50%;left:0;right:0;height:1px}
+  .blip{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 10px var(--gold);animation:blip 3.5s ease-in-out infinite}
+  @keyframes blip{0%,100%{opacity:0;transform:scale(.5)}40%{opacity:1;transform:scale(1)}}
+
+  /* gauges */
+  .gauges{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .gauge{display:flex;flex-direction:column;align-items:center;gap:6px;font-family:"Consolas",monospace;font-size:11px}
+  .gauge svg{width:96px;height:96px;transform:rotate(-90deg)}
+  .gauge .track{fill:none;stroke:rgba(63,224,208,.15);stroke-width:8}
+  .gauge .val{fill:none;stroke:var(--gold);stroke-width:8;stroke-linecap:round;filter:drop-shadow(0 0 4px var(--gold));transition:stroke-dashoffset .6s ease}
+  .gauge .num{font-size:18px;color:#fff}
+  .gauge .lbl{color:var(--cyan);letter-spacing:1px}
+
+  /* graph */
+  canvas#graph{width:100%;flex:1;min-height:120px;border:1px solid var(--line);border-radius:8px;background:rgba(0,0,0,.25)}
+
+  /* system list */
+  .sys{font-family:"Consolas",monospace;font-size:12px;display:flex;flex-direction:column;gap:9px;overflow:auto}
+  .sys .row{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:rgba(0,0,0,.2)}
+  .sys .row .n{color:var(--cyan)}
+  .badge{padding:2px 9px;border-radius:20px;font-size:10px;letter-spacing:1px;border:1px solid}
+  .ok{color:var(--green);border-color:var(--green);box-shadow:0 0 8px rgba(125,255,155,.3)}
+  .warn{color:var(--gold);border-color:var(--gold)}
+  .err{color:var(--danger);border-color:var(--danger);animation:flash 1s steps(2) infinite}
+  @keyframes flash{50%{opacity:.4}}
+  .bars{display:flex;gap:3px;align-items:flex-end;height:20px}
+  .bars i{width:4px;background:var(--cyan);border-radius:2px;animation:eq 1.1s ease-in-out infinite}
+  @keyframes eq{0%,100%{height:20%}50%{height:100%}}
+
+  footer.bar{font-family:"Consolas",monospace;font-size:11px;color:var(--cyan);justify-content:space-between;opacity:.85}
+  footer .term{color:var(--gold-soft)}
+  .blink{animation:bk 1s steps(2) infinite}@keyframes bk{50%{opacity:0}}
+
+  @media(max-width:1000px){.grid{grid-template-columns:1fr}.wrap{height:auto;overflow:auto}body{overflow:auto}}
+</style>
+</head>
+<body>
+
+<!-- BOOT -->
+<div id="boot">
+  <div class="ring"></div>
+  <h1>T U T U &nbsp; O S</h1>
+  <div class="log" id="bootlog"></div>
+</div>
+
+<div class="wrap">
+  <!-- HEADER -->
+  <header class="bar">
+    <div class="brand">
+      <div class="mark"></div>
+      <h1>TUTU<span>//</span>מרכז הבקרה</h1>
+    </div>
+    <div class="right">
+      <div><span class="k">מצב מערכת</span> <span class="v" id="status">פעיל</span></div>
+      <div><span class="k">משתמש</span> <span class="v">CMDR · ORIAN</span></div>
+      <div id="clock">--:--:--</div>
+    </div>
+  </header>
+
+  <!-- MAIN GRID -->
+  <div class="grid">
+    <!-- LEFT -->
+    <section class="panel">
+      <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+      <h2>ליבת כור הקשת</h2>
+      <div class="reactor">
+        <div class="core">
+          <div class="r"></div><div class="r r2"></div><div class="r r3"></div>
+          <div class="seg"></div><div class="glow"></div>
+        </div>
+        <div class="readout">
+          הספק פלט<br><b id="power">98.6%</b><br>
+          <span style="color:var(--cyan)">יציבות פלזמה תקינה</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- CENTER -->
+    <section class="panel">
+      <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+      <h2>טלמטריה בזמן אמת</h2>
+      <canvas id="graph"></canvas>
+      <div class="gauges">
+        <div class="gauge">
+          <svg viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="42"/><circle class="val" id="g1" cx="50" cy="50" r="42"/></svg>
+          <div class="num" id="g1n">0%</div><div class="lbl">מעבד</div>
+        </div>
+        <div class="gauge">
+          <svg viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="42"/><circle class="val" id="g2" cx="50" cy="50" r="42"/></svg>
+          <div class="num" id="g2n">0%</div><div class="lbl">זיכרון</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT -->
+    <section class="panel">
+      <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+      <h2>סריקת סקטור</h2>
+      <div class="radar">
+        <div class="sweep"></div><div class="cross"></div><div class="cross2"></div>
+        <div class="blip" style="left:30%;top:40%;animation-delay:.4s"></div>
+        <div class="blip" style="left:65%;top:60%;animation-delay:1.2s"></div>
+        <div class="blip" style="left:55%;top:25%;animation-delay:2.1s"></div>
+      </div>
+      <h2>סטטוס תת-מערכות</h2>
+      <div class="sys">
+        <div class="row"><span class="n">מנוע רינדור</span><span class="badge ok">מקוון</span></div>
+        <div class="row"><span class="n">סינתזת מדיה · Higgsfield</span><span class="badge ok">מקוון</span></div>
+        <div class="row"><span class="n">רשת המותג</span><span class="bars"><i style="animation-delay:0s"></i><i style="animation-delay:.2s"></i><i style="animation-delay:.4s"></i><i style="animation-delay:.1s"></i><i style="animation-delay:.3s"></i></span></div>
+        <div class="row"><span class="n">פרוטוקול אבטחה</span><span class="badge warn">סריקה</span></div>
+        <div class="row"><span class="n">צומת חיצוני 0x7F</span><span class="badge err">אזהרה</span></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="bar">
+    <div class="term">&gt; tutu@core:~$ <span id="cmd"></span><span class="blink">█</span></div>
+    <div>זמן פעולה רציף: <span id="uptime">00:00:00</span> · TUTU OS v2.6</div>
+  </footer>
+</div>
+
+<script>
+/* ---------- BOOT SEQUENCE ---------- */
+const bootLines = [
+  "אתחול ליבת TUTU OS ...",
+  "טעינת מנהלי התקנים ........ <b>OK</b>",
+  "חיבור לכור הקשת ........... <b>OK</b>",
+  "כיול מערך טלמטריה ......... <b>OK</b>",
+  "סנכרון רשת המותג .......... <b>OK</b>",
+  "הפעלת ממשק JARVIS ......... <b>OK</b>",
+  "ברוך הבא, מפקד."
+];
+const blog = document.getElementById('bootlog');
+let bi = 0;
+const bt = setInterval(()=>{
+  if(bi>=bootLines.length){
+    clearInterval(bt);
+    setTimeout(()=>{
+      const b=document.getElementById('boot');
+      b.style.opacity=0; setTimeout(()=>b.remove(),800);
+    },500);
+    return;
+  }
+  blog.innerHTML += bootLines[bi] + "<br>";
+  bi++;
+},420);
+
+/* ---------- CLOCK + UPTIME ---------- */
+const start = Date.now();
+function pad(n){return String(n).padStart(2,'0')}
+setInterval(()=>{
+  const d=new Date();
+  document.getElementById('clock').textContent=`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  let s=Math.floor((Date.now()-start)/1000);
+  document.getElementById('uptime').textContent=`${pad(s/3600|0)}:${pad((s/60|0)%60)}:${pad(s%60)}`;
+},1000);
+
+/* ---------- GAUGES ---------- */
+const C=2*Math.PI*42;
+function setGauge(id,nid,v){
+  const el=document.getElementById(id);
+  el.style.strokeDasharray=C;
+  el.style.strokeDashoffset=C*(1-v/100);
+  document.getElementById(nid).textContent=Math.round(v)+'%';
+}
+setInterval(()=>{
+  setGauge('g1','g1n',30+Math.random()*55);
+  setGauge('g2','g2n',45+Math.random()*40);
+  document.getElementById('power').textContent=(95+Math.random()*4.8).toFixed(1)+'%';
+},1500);
+setGauge('g1','g1n',62);setGauge('g2','g2n',74);
+
+/* ---------- LIVE GRAPH ---------- */
+const cv=document.getElementById('graph'),ctx=cv.getContext('2d');
+let data=Array(80).fill(0).map(()=>Math.random()*.5+.25);
+function resize(){cv.width=cv.clientWidth;cv.height=cv.clientHeight}
+window.addEventListener('resize',resize);resize();
+function drawGraph(){
+  const w=cv.width,h=cv.height;
+  ctx.clearRect(0,0,w,h);
+  // grid
+  ctx.strokeStyle='rgba(63,224,208,.10)';ctx.lineWidth=1;
+  for(let x=0;x<w;x+=w/10){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}
+  for(let y=0;y<h;y+=h/5){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
+  // line
+  const grad=ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,'rgba(245,197,66,.35)');grad.addColorStop(1,'rgba(245,197,66,0)');
+  ctx.beginPath();
+  data.forEach((v,i)=>{const x=i/(data.length-1)*w,y=h-v*h;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});
+  ctx.lineTo(w,h);ctx.lineTo(0,h);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+  ctx.beginPath();
+  data.forEach((v,i)=>{const x=i/(data.length-1)*w,y=h-v*h;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});
+  ctx.strokeStyle='#f5c542';ctx.lineWidth=2;ctx.shadowColor='#f5c542';ctx.shadowBlur=8;ctx.stroke();ctx.shadowBlur=0;
+}
+setInterval(()=>{
+  data.shift();
+  let last=data[data.length-1];
+  data.push(Math.min(.95,Math.max(.1,last+(Math.random()-.5)*.25)));
+  drawGraph();
+},120);
+
+/* ---------- TERMINAL TYPER ---------- */
+const cmds=[
+  "scan --sector all --depth max",
+  "render brand.assets --queue",
+  "sync higgsfield --pull latest",
+  "diagnostics --core --verbose",
+  "deploy preview --safe"
+];
+let ci=0,chi=0;const cmdEl=document.getElementById('cmd');
+function typer(){
+  const c=cmds[ci];
+  if(chi<=c.length){cmdEl.textContent=c.slice(0,chi);chi++;setTimeout(typer,70)}
+  else{setTimeout(()=>{chi=0;ci=(ci+1)%cmds.length;cmdEl.textContent='';typer()},2200)}
+}
+typer();
+</script>
+</body>
+</html>
