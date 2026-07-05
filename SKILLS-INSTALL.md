@@ -10,26 +10,37 @@ in two ready-to-use forms so it works on **every** Claude surface.
 
 | Path | For | How it's consumed |
 |------|-----|-------------------|
-| `.claude/skills/<skill>/` | **Claude Code** (CLI, web, IDE) | Read automatically in any Claude Code session on this repo. |
-| `dist/skills-zips/<skill>.zip` | **Chat & Cowork** (claude.ai) | Upload per skill in Settings → Capabilities → Skills. |
-| `dist/skills-zips/_ALL-skills-bundle.zip` | convenience | All 34 skill folders in one archive. |
+| `.claude/skills/<skill>/` | **Claude Code** (CLI, web, IDE) + **Cowork** | Read automatically in any Claude Code / Cowork session on this repo. |
+| `dist/skills-claude-ai-zips/<skill>.zip` | **Chat** (claude.ai, account-level) | Upload per skill in Customize → Skills. **claude.ai-compatible** (name = folder, description ≤ 200 chars, no extra frontmatter). |
+| `dist/skills-claude-ai-zips/_ALL-claude-ai-bundle.zip` | convenience | All 34 claude.ai-ready skill folders in one archive. |
+| `dist/skills-zips/<skill>.zip` | raw/full copies | Same skills but with the *original* (long) descriptions — for Claude Code, not claude.ai. |
 
 ## Install per platform
 
 ### Claude Code (this repo) — already done
 Skills under `.claude/skills/` are picked up automatically. Nothing to do. To use them in
-*any* repo, copy the folders into `~/.claude/skills/` (user-level).
+*any* repo, copy the folders into `~/.claude/skills/` (user-level). Or install the upstream
+plugins directly, e.g. `/plugin marketplace add obra/superpowers` then `/plugin install superpowers`.
 
-### Chat & Cowork (claude.ai) — account-level upload
-These surfaces read skills from your **account**, not the repo, so they must be uploaded once:
-1. Open **claude.ai → Settings → Capabilities → Skills** (Skills must be enabled for your plan/org).
-2. Click **Upload skill** and pick a `.zip` from `dist/skills-zips/`.
-3. Repeat per skill, or upload `_ALL-skills-bundle.zip` if bulk upload is supported.
-Once uploaded they are available in both **Chat** and **Cowork**.
+### Cowork (claude.ai, working on this repo) — already done
+Cowork operates on your GitHub repo, so it reads `.claude/skills/` from the repo automatically.
+Just open `tutu-brand-site` in Cowork — nothing to upload.
 
-> Note: `claude-mem` skills (mem-search, knowledge-agent, timeline-report, …) expect the
-> claude-mem plugin/MCP backend to be installed to be fully functional; they upload fine but
-> some features need that backend.
+### Chat (claude.ai, not connected to a repo) — account-level upload
+Plain Chat reads skills from your **account**, so each must be uploaded once:
+1. First enable execution: **Settings → Capabilities → Code execution** must be ON
+   (Free/Pro/Max toggle it yourself; Team/Enterprise need an Owner to enable it).
+2. Open **claude.ai → Customize → Skills** (or the Skills panel), click **+**, then **+ Create skill**.
+3. Upload a `.zip` from **`dist/skills-claude-ai-zips/`** (NOT `dist/skills-zips/` — those have
+   over-long descriptions that claude.ai rejects).
+4. Repeat per skill. Once uploaded they are available across your Chat conversations.
+
+> **Why earlier uploads failed:** claude.ai enforces `description ≤ 200 chars`, `name` = a slug
+> matching the folder, and only `name`/`description` frontmatter. 14 of these skills had longer
+> descriptions and a few had extra fields. The `dist/skills-claude-ai-zips/` set fixes all of that.
+>
+> Note: `claude-mem` skills (mem-search, knowledge-agent, timeline-report, …) upload fine but
+> need the claude-mem plugin/MCP backend for full functionality.
 
 ## Skills included
 
