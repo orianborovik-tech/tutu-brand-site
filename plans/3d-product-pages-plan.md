@@ -2,8 +2,16 @@
 
 **Status:** Ready for execution
 **Executor:** Claude Code (this plan is written to be executed by Claude Code, phase by phase)
-**Date:** 2026-07-06
+**Date:** 2026-07-06 · **Revision:** v1.1 (2026-07-06)
 **Branch:** `claude/spline-design-concepts-d9bhxs`
+
+> **v1.1 changelog — corrections from the first build review (MANA demo):** two defects
+> reached the delivered page and are now blocked by binding rules in **Part 10**:
+> (1) the user-supplied background reference image was treated as inspiration and a new
+> composition was invented instead of replicating the reference 1:1; (2) extracted sprite
+> cutouts shipped with visible straight crop edges (sliced leaf, clipped flower, cut star
+> rays). Part 10 rules override any conflicting guidance elsewhere in this plan, and
+> Phases 2 and 5 now carry the corresponding checks.
 
 ---
 
@@ -284,8 +292,8 @@ tools/   prep_label.py  build_can.py  build_bottle.py  optimize.sh  qa_shot.mjs
 
 ### Phase 2 — Model production from the user's photos (1 session per product)
 **Do:** apply Phase 1 tools to the user's actual photos (per spec 4.4); choose route via matrix 4.5; iterate with the QA loop: turntable screenshots from 4 angles vs. reference photos → adjust proportions/materials → repeat.
-**Verify:** side-by-side screenshot vs. photo approved by the user; `gltf-transform inspect` within budgets; label text readable at 1024px render.
-**Guards:** never ship an AI-generated label texture (Route B shapes still get real artwork re-projected); don't exceed texture budget for marginal sharpness.
+**Verify:** side-by-side screenshot vs. photo approved by the user; `gltf-transform inspect` within budgets; label text readable at 1024px render; **every extracted sprite passes the Rule R2 edge audit + zoom contact-sheet pass (neutral background)**.
+**Guards:** never ship an AI-generated label texture (Route B shapes still get real artwork re-projected); don't exceed texture budget for marginal sharpness; **no sliced/partial cutouts — whole elements, reconstructed, or dropped (Rule R2)**.
 
 ### Phase 3 — Web viewer foundation (1 session)
 **Do:** Vite project per Part 6 layout; `core/scene.ts` (renderer, DPR cap, `NeutralToneMapping`, sRGB, HDRI environment, resize, visibility pause) and `core/loaders.ts` (self-hosted Draco/Meshopt/KTX2 decoder files copied from `node_modules/three/examples/jsm/libs/`); poster fallback when `getContext('webgl2')` fails; `window.__sceneReady` flag after first render (for QA tooling).
@@ -298,9 +306,9 @@ tools/   prep_label.py  build_can.py  build_bottle.py  optimize.sh  qa_shot.mjs
 **Guards:** all continuous motion must be eased/damped (`quickTo`, `slerp`) — instant tracking looks broken; everything through `gsap.ticker`, one RAF loop total; kill ScrollTriggers on teardown.
 
 ### Phase 5 — Product page assembly (1–2 sessions)
-**Do:** compose the Tutu brand product page: hero (G1 entry + G2 idle + G3 parallax) → scroll story sections (G5: rotation scrub, camera dollies, scrubbed wiggle clip) → variant/flavor switcher if applicable (G6) → CTA. Copy pacing from Mana (desktop-only scroll rotation, mobile simplified). Wire brand colors/typography (see `environments.md` visual direction in this repo).
-**Verify:** full-page Playwright pass: screenshots at scroll 0 / 25 / 50 / 75 / 100 %, at two viewports (1440px, 390px); mobile shows poster/simplified mode; Lighthouse perf ≥ 85 on desktop.
-**Guards:** no scroll-jacking without Lenis + ScrollTrigger integration (the documented recipe); text content must remain real HTML for SEO/accessibility — 3D is presentation, not content.
+**Do:** compose the Tutu brand product page: hero (G1 entry + G2 idle + G3 parallax) → scroll story sections (G5: rotation scrub, camera dollies, scrubbed wiggle clip) → variant/flavor switcher if applicable (G6) → CTA. Copy pacing from Mana (desktop-only scroll rotation, mobile simplified). Wire brand colors/typography (see `environments.md` visual direction in this repo). **If the user supplied a reference image for the page/background, start with the Rule R1 reference-inventory table and build the composition from it — do not invent a layout.**
+**Verify:** full-page Playwright pass: screenshots at scroll 0 / 25 / 50 / 75 / 100 %, at two viewports (1440px, 390px); mobile shows poster/simplified mode; Lighthouse perf ≥ 85 on desktop; **Rule R1 overlay diff vs. the reference image, element-by-element, plus a 200% zoom pass over every floating element (Rule R2)**.
+**Guards:** no scroll-jacking without Lenis + ScrollTrigger integration (the documented recipe); text content must remain real HTML for SEO/accessibility — 3D is presentation, not content; **no free composition when a reference exists — deviations require prior user approval (Rule R1)**.
 
 ### Phase 6 — Optimization & QA hardening (1 session)
 **Do:** `gltf-transform optimize` final pass; KTX2 with WebP fallback; lazy-load the 3D bundle below the fold; `prefers-reduced-motion` → static presentation; WebGL context-loss handler → poster; cross-check budgets table.
@@ -344,6 +352,69 @@ Re-run every phase's checklist top to bottom on the deployed URL; grep the codeb
 | SwiftShader ≠ real GPU colors/perf | Low visual, real perf | Budgets + one human device check |
 | Shopify Liquid/CSP quirks (import maps) | Medium | Single-file bundle; iframe fallback |
 | Heavy scene on mobile | Medium | Poster-first mobile, reduced effects (< 600 px, the Mana approach), `prefers-reduced-motion` |
+
+---
+
+# PART 10 — Binding Fidelity Rules (v1.1 — added after first build review)
+
+These rules are **mandatory** for every phase and override any conflicting wording
+elsewhere in this plan. Both exist because their violation reached a delivered page.
+
+## Rule R1 — A user-supplied reference image is a binding spec, not inspiration
+
+When the user provides a reference image for a page, background, or composition
+("use this as the background/reference"), the default is a **1:1 reproduction**.
+Creative reinterpretation is a bug, not a feature.
+
+**Required workflow:**
+1. **Decompose the reference first.** Before building anything, produce a reference
+   inventory table: every visible element, its position (as % of frame width/height),
+   relative size, layer order (in front of / behind), and material/finish
+   (glass, matte print, gradient). This table is the layout spec.
+2. **Build from the table, not from taste.** Element positions, sizes, and layering in
+   the scene must come from the measured values. Free placement is allowed only for
+   elements that do not exist in the reference — and only after user approval.
+3. **Verify by overlay diff.** End-of-phase check: render the built page at the
+   reference's aspect ratio and produce a side-by-side + semi-transparent overlay
+   against the reference image. Audit element-by-element against the inventory table.
+   Any element in the wrong place/size/layer = phase not done.
+4. **Deviations need approval.** Any intentional deviation (technical constraint,
+   missing asset) is listed in a "deviations" note shown to the user *before* the
+   phase is declared complete — never discovered by the user afterwards.
+
+**Anti-pattern (what happened in v1.0):** the key-visual reference was used as a "mood"
+while positions, element selection, and the backdrop itself were improvised. Never again:
+"inspired by" is only permitted when the user explicitly asks for a variation.
+
+## Rule R2 — Zero crop-artifact policy for extracted assets
+
+No sprite/cutout may ship with a visible straight crop edge, sliced artwork, or a
+fragment of a neighboring element. Violations seen in v1.0: a mint leaf with a flat
+sliced side, a flower with a cut-off attached leaf, a starburst with amputated rays.
+
+**Required workflow:**
+1. **Cut whole elements only.** The crop box must fully contain the element with a
+   margin. If the element is partially occluded or overlapped by other artwork in the
+   source, do one of: (a) enlarge/move the box to capture it whole; (b) reconstruct the
+   missing part (mirror a clean half, redraw the simple vector shape, clone from a
+   sibling asset — e.g. another flavor's label); (c) **drop the element entirely**.
+   Shipping a sliced element is never an option.
+2. **Automated edge audit (hard gate).** For every produced sprite PNG: fail if any
+   pixel with alpha > 0 lies within 2 px of the canvas border — that is the signature
+   of sliced content (autocrop pads real silhouettes with transparent margin; content
+   touching the border means the cut went through artwork). The audit runs in the asset
+   pipeline script and blocks the phase on failure.
+3. **Human-eye zoom pass.** Before use, render every sprite at 2–4× on a contrasting
+   background in a contact sheet and visually inspect silhouettes for straight lines,
+   half-shapes, and foreign fragments. (v1.0's contact sheets were green-on-green,
+   which hid green-edge defects — use a neutral magenta/checker background.)
+4. **In-page audit.** The final page screenshot review explicitly includes zooming into
+   every floating element at 200 % — the defects the user caught were visible only at
+   zoom.
+
+**Anti-pattern guards (grep-able):** no `crop((` box committed without a following
+edge-audit call; no `ship` of a sprite whose bounding silhouette touches the canvas
+border; contact sheets must use a non-brand background color.
 
 ---
 
