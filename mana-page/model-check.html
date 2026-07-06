@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>model check</title><style>body{margin:0;background:#7fbf5e}</style></head>
+<body>
+<canvas id="c"></canvas>
+<script type="importmap">{"imports":{
+  "three":"/node_modules/three/build/three.module.js",
+  "three/addons/":"/node_modules/three/examples/jsm/"
+}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const params = new URLSearchParams(location.search);
+const yaw = parseFloat(params.get('yaw') || '0');
+
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+renderer.setSize(760, 900);
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.toneMappingExposure = 1.15;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x7fbf5e);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const camera = new THREE.PerspectiveCamera(32, 760 / 900, 0.01, 10);
+camera.position.set(0, 0.01, 0.42);
+camera.lookAt(0, 0, 0);
+
+const key = new THREE.DirectionalLight(0xffffff, 1.4);
+key.position.set(0.4, 0.7, 0.7);
+scene.add(key);
+
+new GLTFLoader().load('/public/assets/mana-can.glb', (g) => {
+  const root = g.scene;
+  root.rotation.y = yaw * Math.PI / 180;
+  root.traverse((o) => {
+    if (o.isMesh && o.material.map) {
+      o.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      o.material.envMapIntensity = 1.6;
+    }
+  });
+  scene.add(root);
+  renderer.render(scene, camera);
+  window.__sceneReady = true;
+});
+</script>
+</body>
+</html>
