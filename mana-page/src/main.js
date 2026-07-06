@@ -11,6 +11,48 @@ import gsap from 'gsap';
 // (the standalone single-file build), otherwise the normal relative path.
 const assetURL = (path) => (window.__ASSET_MAP__ && window.__ASSET_MAP__[path]) || path;
 
+// Sandboxed hosts (e.g. Artifacts) can run a CSP whose connect-src excludes
+// data:/blob:, which silently breaks fetch()-based loaders (GLTFLoader/
+// SVGLoader) even though data:/blob: <img> tags still work. Disabling
+// createImageBitmap forces three.js's internal glTF texture loader onto its
+// classic <img src="blob:..."> fallback (governed by img-src, not
+// connect-src) instead of fetch()+createImageBitmap on the same blob URL.
+window.createImageBitmap = undefined;
+
+// Decode data: URIs by hand and feed loaders their synchronous/parse entry
+// points instead of .load(url), so nothing goes through fetch/XHR for the
+// top-level embedded assets either.
+function dataURIToBytes(uri) {
+  const bin = atob(uri.slice(uri.indexOf(',') + 1));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+function loadGLTF(loader, path, onLoad) {
+  if (path.startsWith('data:')) {
+    loader.parse(dataURIToBytes(path).buffer, '', onLoad);
+  } else {
+    loader.load(path, onLoad);
+  }
+}
+function loadSVG(loader, path, onLoad) {
+  if (path.startsWith('data:')) {
+    onLoad(loader.parse(new TextDecoder().decode(dataURIToBytes(path))));
+  } else {
+    loader.load(path, onLoad);
+  }
+}
+function loadTexture(path, onLoad) {
+  const img = new Image();               // classic <img> load: governed by img-src, not connect-src
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const tex = new THREE.Texture(img);
+    tex.needsUpdate = true;
+    onLoad(tex);
+  };
+  img.src = path;
+}
+
 const canvas = document.getElementById('scene');
 const params = new URLSearchParams(location.search);
 const staticMode = params.has('static');            // deterministic pose for headless QA
@@ -93,7 +135,7 @@ const glassMat = isCoarse
       ior: 1.44, specularIntensity: 0.45, envMapIntensity: 0.85,
     });
 
-new SVGLoader().load(assetURL('assets/mana-logo.svg'), (svg) => {
+loadSVG(new SVGLoader(), assetURL('assets/mana-logo.svg'), (svg) => {
   const shapes = svg.paths.flatMap((p) => SVGLoader.createShapes(p));
   const geo = new THREE.ExtrudeGeometry(shapes, {
     depth: 42, bevelEnabled: true, bevelThickness: 3, bevelSize: 3, bevelSegments: 2, curveSegments: 10,
@@ -117,7 +159,7 @@ canRig.add(canMouse);
 scene.add(canRig);
 
 let canRoot = null;
-new GLTFLoader().load(assetURL('assets/mana-can.glb'), (g) => {
+loadGLTF(new GLTFLoader(), assetURL('assets/mana-can.glb'), (g) => {
   canRoot = g.scene;
   canRoot.traverse((o) => {
     if (o.isMesh && o.material) {
@@ -165,9 +207,8 @@ const spriteDefs = [
   ['sparkle',      -0.052,  0.05,   0.07,  0.012, 0.4, -0.6],
 ];
 const sprites = [];
-const texLoader = new THREE.TextureLoader();
 for (const [file, x, y, z, size, depth, spin] of spriteDefs) {
-  texLoader.load(assetURL(`assets/sprites/${file}.png`), (t) => {
+  loadTexture(assetURL(`assets/sprites/${file}.png`), (t) => {
     t.colorSpace = THREE.SRGBColorSpace;
     const ar = t.image.width / t.image.height;
     const m = new THREE.Mesh(
