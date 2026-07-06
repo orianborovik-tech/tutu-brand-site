@@ -7,6 +7,10 @@ import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import gsap from 'gsap';
 
+// resolves to an inlined data: URI when window.__ASSET_MAP__ is present
+// (the standalone single-file build), otherwise the normal relative path.
+const assetURL = (path) => (window.__ASSET_MAP__ && window.__ASSET_MAP__[path]) || path;
+
 const canvas = document.getElementById('scene');
 const params = new URLSearchParams(location.search);
 const staticMode = params.has('static');            // deterministic pose for headless QA
@@ -89,7 +93,7 @@ const glassMat = isCoarse
       ior: 1.44, specularIntensity: 0.45, envMapIntensity: 0.85,
     });
 
-new SVGLoader().load('assets/mana-logo.svg', (svg) => {
+new SVGLoader().load(assetURL('assets/mana-logo.svg'), (svg) => {
   const shapes = svg.paths.flatMap((p) => SVGLoader.createShapes(p));
   const geo = new THREE.ExtrudeGeometry(shapes, {
     depth: 42, bevelEnabled: true, bevelThickness: 3, bevelSize: 3, bevelSegments: 2, curveSegments: 10,
@@ -113,7 +117,7 @@ canRig.add(canMouse);
 scene.add(canRig);
 
 let canRoot = null;
-new GLTFLoader().load('assets/mana-can.glb', (g) => {
+new GLTFLoader().load(assetURL('assets/mana-can.glb'), (g) => {
   canRoot = g.scene;
   canRoot.traverse((o) => {
     if (o.isMesh && o.material) {
@@ -163,7 +167,7 @@ const spriteDefs = [
 const sprites = [];
 const texLoader = new THREE.TextureLoader();
 for (const [file, x, y, z, size, depth, spin] of spriteDefs) {
-  texLoader.load(`assets/sprites/${file}.png`, (t) => {
+  texLoader.load(assetURL(`assets/sprites/${file}.png`), (t) => {
     t.colorSpace = THREE.SRGBColorSpace;
     const ar = t.image.width / t.image.height;
     const m = new THREE.Mesh(
