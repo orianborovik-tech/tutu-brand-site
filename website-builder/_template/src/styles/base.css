@@ -1,0 +1,77 @@
+/* ============================================================================
+   BASE — engineering CSS only: reset, fluid rem system, layout plumbing.
+   No aesthetics here. Aesthetics = tokens.css + per-project styles.
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; }
+img, picture, video, canvas, svg { display: block; max-width: 100%; }
+
+/* Fluid vector-artboard scaling (12): two design canvases, 1440 & 375.
+   Everything is sized in rem → the design scales like vector art. */
+html { font-size: 1.1111vw; } /* 16 / 1440 * 100 */
+@media (max-width: 809px) { html { font-size: 4.2667vw; } } /* 16 / 375 * 100 */
+@media (min-width: 1920px) { html { font-size: 21.33px; } } /* clamp the scale-up */
+
+body {
+  font-family: var(--font-text);
+  background: var(--c-ground-dark);
+  color: var(--c-ground-light);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Fixed canvas under everything (Architecture 1 — 30/31) */
+#webgl {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: var(--z-canvas);
+}
+
+main { position: relative; z-index: var(--z-content); }
+
+/* Sections: full-viewport by default; svh — NEVER bare 100vh (43) */
+main > section, main > footer { min-height: 100svh; position: relative; }
+
+h1, h2 {
+  font-family: var(--font-display);
+  line-height: var(--lh-display);
+  letter-spacing: var(--ls-display);
+}
+
+header[data-nav] {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: var(--z-nav);
+  padding-top: env(safe-area-inset-top);
+}
+
+.skip-link {
+  position: absolute;
+  z-index: calc(var(--z-loader) + 1);
+  inset-inline-start: 1rem;
+  top: -100%;
+}
+.skip-link:focus-visible { top: 1rem; }
+
+/* Reveal plumbing: elements start hidden ONLY when JS+motion are active.
+   (html.js-motion is set by main.js after the reduced-motion gate) */
+html.js-motion [data-reveal] { visibility: hidden; }
+html.js-motion [data-reveal].is-revealed { visibility: visible; }
+
+/* Reduced motion: everything visible, no smoothing, instant states (44) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Lenis recommended styles (31) — inlined so no extra request */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }

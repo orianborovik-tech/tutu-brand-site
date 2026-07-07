@@ -1,0 +1,42 @@
+/* ============================================================================
+   DESIGN TOKENS — every value below is a PROJECT DECISION (CREATIVITY-CONTRACT).
+   Derive from THIS project's references + concept. Values shipped here are
+   deliberately ugly neutrals so nothing survives by accident.
+   Governed by system files 12 (color/space/shape) and 13 (type).
+   npm run build fails while any TODO_DECIDE remains in this file.
+   ========================================================================== */
+:root {
+  /* ---- color: tonal family + grounds + accent (12) ---- */
+  --c-tone-900: #141414; /* TODO_DECIDE(12): deep step of the project's tonal family */
+  --c-tone-600: #4a4a4a; /* TODO_DECIDE(12) */
+  --c-tone-300: #9a9a9a; /* TODO_DECIDE(12) */
+  --c-ground-light: #e6e6e6; /* TODO_DECIDE(12): never pure #fff */
+  --c-ground-dark: #141414;  /* TODO_DECIDE(12): never pure #000 */
+  --c-accent: #888888;       /* TODO_DECIDE(12): the ONE electric accent, <5% coverage */
+  --c-shadow-tint: #3a3a3a;  /* TODO_DECIDE(12,26): sampled shadow color, never black */
+  --boot-bg: var(--c-ground-dark);
+
+  /* ---- type (13) ---- */
+  --font-display: system-ui;  /* TODO_DECIDE(13): the opinionated display face (self-hosted woff2) */
+  --font-text: system-ui;     /* TODO_DECIDE(13): the neutral workhorse */
+  --lh-display: 0.85;         /* TODO_DECIDE(13): 0.78–0.9 for display */
+  --ls-display: -0.02em;      /* TODO_DECIDE(13) */
+
+  /* ---- motion (32; JS twin lives in src/motion.js — keep in sync) ---- */
+  --ease-house: cubic-bezier(0.25, 1, 0.5, 1); /* TODO_DECIDE(32): THE brand curve */
+  --dur-micro: 0.18s;
+  --dur-ui: 0.4s;    /* TODO_DECIDE(32) */
+  --dur-reveal: 0.8s;
+
+  /* ---- shape & space (12) ---- */
+  --radius-s: 0px;   /* TODO_DECIDE(12): shape language */
+  --radius-m: 0px;   /* TODO_DECIDE(12) */
+  --space-unit: 0.8rem;
+
+  /* ---- z ladder (engineering — do not reorder) ---- */
+  --z-canvas: 0;
+  --z-content: 10;
+  --z-nav: 100;
+  --z-transition: 900;
+  --z-loader: 1000;
+}

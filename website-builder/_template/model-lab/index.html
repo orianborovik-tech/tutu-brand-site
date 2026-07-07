@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>model-lab</title>
+  <style>html,body{margin:0;height:100%;background:#fff}canvas{display:block}</style>
+</head>
+<body>
+  <!--
+    MODEL LAB (system file 24): deterministic render harness for the
+    photo→model verification loop. Camera via URL params:
+      ?az=30&el=10&fov=35&dist=2.5
+    Modes: &matcap=1 (neutral form check) &silhouette=1 (IoU) &wireframe=1
+    shots.mjs waits for window.__renderedOnce before screenshotting.
+  -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+    import { buildModel } from './model.js';
+
+    const q = new URLSearchParams(location.search);
+    const az = +(q.get('az') ?? 25) * Math.PI / 180;
+    const el = +(q.get('el') ?? 8) * Math.PI / 180;
+    const fov = +(q.get('fov') ?? 30);
+    const dist = +(q.get('dist') ?? 2.5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(1); // deterministic pixels for metrics
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(q.has('silhouette') ? '#ffffff' : '#e8e8e8');
+
+    const camera = new THREE.PerspectiveCamera(fov, innerWidth / innerHeight, 0.01, 50);
+    camera.position.setFromSphericalCoords(dist, Math.PI / 2 - el, az);
+
+    const model = await buildModel(THREE, q);
+    const box = new THREE.Box3().setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+    camera.lookAt(0, center.y, 0);
+    scene.add(model);
+
+    if (q.has('silhouette')) {
+      model.traverse((c) => { if (c.isMesh) c.material = new THREE.MeshBasicMaterial({ color: '#000' }); });
+    } else if (q.has('matcap')) {
+      model.traverse((c) => { if (c.isMesh) c.material = new THREE.MeshStandardMaterial({ color: '#9a9a9a', roughness: 0.5 }); });
+      scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+    } else {
+      scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+      const key = new THREE.DirectionalLight('#fff', 2.5);
+      key.position.set(3, 4, 2);
+      key.castShadow = true;
+      key.shadow.mapSize.set(2048, 2048);
+      scene.add(key);
+      const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(20, 20),
+        new THREE.ShadowMaterial({ opacity: 0.35 }),
+      );
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = box.min.y;
+      ground.receiveShadow = true;
+      scene.add(ground);
+    }
+    if (q.has('wireframe')) model.traverse((c) => { if (c.isMesh) c.material.wireframe = true; });
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(() => { renderer.render(scene, camera); window.__renderedOnce = true; });
+  </script>
+</body>
+</html>

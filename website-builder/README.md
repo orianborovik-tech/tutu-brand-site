@@ -84,7 +84,16 @@ INTAKE → ANALYSIS → CONCEPT → 3D PRODUCTION → WORLD → EXPERIENCE → H
 | 50 | quality-bar | Awwwards rubric (D40/U30/C20/Co10), ship gate ≥ 8.5 |
 | 51 | preflight-checklist | the final ✓ list with evidence → SHIP-REPORT to the user |
 
-## Conventions that make 30 files one system
+## `_template/` — the engineering starter
+
+Alongside the expertise files sits **`_template/`**: a working, smoke-tested code skeleton
+(Three.js + GSAP + Lenis + Vite) implementing files 30/31/32/34/40 — plus the `model-lab/`
+verification harness of file 24. It contains **zero design decisions**: every creative choice is
+a `TODO_DECIDE(nn)` marker that *fails the build* until decided per-project (see its
+`CREATIVITY-CONTRACT.md`). כל אתר חדש מתחיל מהצנרת הזו — ונראה אחרת לגמרי, כי כל העיצוב
+נקבע מחדש בכל פרויקט.
+
+## Conventions that make 34 files one system
 
 - **Contracts between phases:** named artifacts in `_process/` — BRIEF → MODELING-SPEC / PLATE-SHEET
   → CONCEPT / COPY / SHOT-LIST → MODEL.md → WORKLOG → SHIP-REPORT.

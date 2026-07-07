@@ -1,0 +1,30 @@
+{
+  "name": "site-from-system",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Engineering-only starter emitted by website-builder/. Contains ZERO design decisions — see CREATIVITY-CONTRACT.md before touching anything.",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run check:decisions && vite build",
+    "preview": "vite preview",
+    "check:decisions": "node scripts/check-decisions.mjs",
+    "lab": "vite model-lab --port 5180",
+    "lab:shots": "node model-lab/shots.mjs",
+    "lab:compare": "node model-lab/compare.mjs"
+  },
+  "dependencies": {
+    "detect-gpu": "^5.0.0",
+    "gsap": "^3.13.0",
+    "lenis": "^1.3.0",
+    "postprocessing": "^6.36.0",
+    "simplex-noise": "^4.0.0",
+    "three": "^0.185.0"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.45.0",
+    "sharp": "^0.33.0",
+    "vite": "^7.0.0",
+    "vite-plugin-glsl": "^1.3.0"
+  }
+}

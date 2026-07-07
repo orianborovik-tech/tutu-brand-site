@@ -28,6 +28,14 @@ React app. WebGPU/TSL: opt-in future tier, not default.
 Install current stable versions at scaffold time (`npm i three gsap lenis postprocessing detect-gpu`,
 dev: `vite vite-plugin-glsl`), record the resolved versions in the project README.
 
+## The ready-made starter: `_template/`
+
+**Do not scaffold from scratch — copy `website-builder/_template/` and read its
+`CREATIVITY-CONTRACT.md`.** It is this file's skeleton already implemented, smoke-tested
+(build + headless render + model-lab shots verified), with every creative decision exposed as a
+`TODO_DECIDE(nn)` marker that BLOCKS the build until decided. The skeleton below documents what's
+inside it.
+
 ## Project skeleton (emit exactly)
 
 ```
