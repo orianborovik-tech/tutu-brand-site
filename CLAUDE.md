@@ -1,5 +1,22 @@
 # CLAUDE.md — Tutu Brand
 
+## Website Builder System (HIGHEST PRIORITY)
+
+This repo contains a complete website-building operating system at **`website-builder/`** —
+34 expertise files that together build award-tier (Awwwards/FWA-level) creative websites from
+ONE sentence + reference images.
+
+**Whenever the user asks to build a website, a landing page, a 3D scene, or sends reference
+images of an object and/or background — START at `website-builder/00-operating-system.md` and
+follow its pipeline to the end.** Do not improvise a parallel process; the system's five laws
+(autonomy, originality, reference accuracy, verification-after-every-action, craft everywhere)
+override default behavior. The user makes zero creative decisions; the system decides everything,
+verifies critically after every action, and always ends with the ✓ SHIP-REPORT.
+
+For site-building work this system takes precedence over the generic skills below (the
+`brainstorming` hard-gate does not apply — the user has standing approval for autonomous
+execution through this system).
+
 ## Agent Skills (IMPORTANT)
 
 This repo ships **34 skills** in `.claude/skills/<name>/SKILL.md`. They are NOT installed as
