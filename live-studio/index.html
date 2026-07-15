@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tutu Live — שידור חי: מצלמה + מיקרופון</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎥</text></svg>">
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #141824;
+    --panel-2: #1b2130;
+    --line: #29304a;
+    --text: #eef1f8;
+    --muted: #9aa3b8;
+    --accent: #7c5cff;
+    --accent-2: #4dd6c1;
+    --live: #ff3b5c;
+    --ok: #3ecf8e;
+    --warn: #ffb02e;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: radial-gradient(1200px 700px at 80% -10%, #1a1f3a 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: "Segoe UI", "Heebo", "Arial Hebrew", Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(11,13,18,.7);
+    backdrop-filter: blur(8px);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .logo {
+    font-weight: 800;
+    font-size: 1.25rem;
+    letter-spacing: .5px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    white-space: nowrap;
+  }
+  .badge-live {
+    display: none;
+    align-items: center;
+    gap: 7px;
+    background: rgba(255,59,92,.14);
+    border: 1px solid rgba(255,59,92,.5);
+    color: var(--live);
+    font-weight: 700;
+    font-size: .8rem;
+    padding: 4px 12px;
+    border-radius: 999px;
+    letter-spacing: 1px;
+  }
+  .badge-live.on { display: inline-flex; }
+  .badge-live .dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--live);
+    animation: pulse 1.1s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1);} 50% { opacity: .35; transform: scale(.75);} }
+  #timer { font-variant-numeric: tabular-nums; color: var(--muted); font-size: .9rem; }
+  header .spacer { flex: 1; }
+  #streamStats { color: var(--muted); font-size: .8rem; direction: ltr; }
+
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 18px;
+    padding: 18px 22px;
+    width: 100%;
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+  @media (max-width: 980px) {
+    main { grid-template-columns: 1fr; }
+  }
+
+  .stage {
+    position: relative;
+    background: #000;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    min-height: 320px;
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: #000;
+  }
+  video.mirrored { transform: scaleX(-1); }
+
+  .stage .placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    text-align: center;
+    padding: 24px;
+    background: linear-gradient(160deg, #141824, #0b0d12);
+  }
+  .placeholder .cam-icon { font-size: 3.2rem; }
+  .placeholder p { color: var(--muted); max-width: 420px; line-height: 1.6; }
+
+  .stage .overlay-top {
+    position: absolute;
+    top: 12px;
+    inset-inline-start: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .chip {
+    background: rgba(0,0,0,.55);
+    border: 1px solid rgba(255,255,255,.15);
+    color: #fff;
+    font-size: .75rem;
+    padding: 4px 10px;
+    border-radius: 999px;
+    backdrop-filter: blur(4px);
+  }
+  .chip.rec { color: #ffb1c0; border-color: rgba(255,59,92,.6); }
+
+  .meter-wrap {
+    position: absolute;
+    bottom: 0;
+    inset-inline: 0;
+    padding: 10px 14px 12px;
+    background: linear-gradient(180deg, transparent, rgba(0,0,0,.65));
+    display: none;
+  }
+  .meter-wrap.on { display: block; }
+  #audioMeter { width: 100%; height: 46px; display: block; }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .card h2 {
+    font-size: .95rem;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #cdd4e6;
+  }
+
+  .controls-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  button {
+    font-family: inherit;
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 11px 14px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s, transform .05s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+  button:hover:not(:disabled) { background: #232b40; border-color: #3a4468; }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.primary {
+    background: linear-gradient(90deg, var(--accent), #5f7bff);
+    border: none;
+  }
+  button.primary:hover:not(:disabled) { filter: brightness(1.1); background: linear-gradient(90deg, var(--accent), #5f7bff); }
+  button.danger { background: rgba(255,59,92,.15); border-color: rgba(255,59,92,.55); color: #ff8ba1; }
+  button.danger:hover:not(:disabled) { background: rgba(255,59,92,.25); }
+  button.toggled { border-color: var(--accent-2); color: var(--accent-2); background: rgba(77,214,193,.08); }
+
+  label.field { display: block; font-size: .8rem; color: var(--muted); margin-bottom: 10px; }
+  select, input[type="text"] {
+    width: 100%;
+    margin-top: 5px;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: .88rem;
+  }
+  select:focus, input:focus { outline: 1.5px solid var(--accent); }
+
+  .transcript-box {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px;
+    min-height: 140px;
+    max-height: 260px;
+    overflow-y: auto;
+    line-height: 1.7;
+    font-size: .95rem;
+  }
+  .transcript-box .interim { color: var(--muted); font-style: italic; }
+  .transcript-box:empty::before {
+    content: "התמליל של הדיבור שלך יופיע כאן בזמן אמת…";
+    color: var(--muted);
+    font-size: .85rem;
+  }
+  .listen-indicator {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent-2);
+    font-size: .8rem;
+    margin-top: 10px;
+  }
+  .listen-indicator.on { display: inline-flex; }
+  .listen-indicator .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent-2);
+    animation: pulse 1.2s infinite;
+  }
+
+  .row { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .row > * { flex: 1; }
+
+  #alerts { display: flex; flex-direction: column; gap: 8px; }
+  .alert {
+    border-radius: 10px;
+    padding: 11px 14px;
+    font-size: .85rem;
+    line-height: 1.55;
+  }
+  .alert.error { background: rgba(255,59,92,.12); border: 1px solid rgba(255,59,92,.45); color: #ffb1c0; }
+  .alert.warn  { background: rgba(255,176,46,.1); border: 1px solid rgba(255,176,46,.45); color: #ffd28a; }
+  .alert.info  { background: rgba(124,92,255,.12); border: 1px solid rgba(124,92,255,.45); color: #c9bcff; }
+
+  footer {
+    padding: 14px 22px 20px;
+    color: var(--muted);
+    font-size: .78rem;
+    text-align: center;
+    line-height: 1.7;
+  }
+  footer code { background: var(--panel-2); padding: 1px 7px; border-radius: 6px; direction: ltr; display: inline-block; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo">TUTU LIVE ✦ סטודיו שידור</span>
+  <span class="badge-live" id="liveBadge"><span class="dot"></span> LIVE</span>
+  <span id="timer"></span>
+  <span class="spacer"></span>
+  <span id="streamStats"></span>
+</header>
+
+<main>
+  <!-- ====== במה: וידאו חי ====== -->
+  <section class="stage" id="stage">
+    <video id="preview" autoplay playsinline muted class="mirrored"></video>
+
+    <div class="placeholder" id="placeholder">
+      <div class="cam-icon">🎥</div>
+      <h1 style="font-size:1.2rem;">שידור חי — וידאו רציף, לא תמונות</h1>
+      <p>לחיצה על <b>„התחל שידור"</b> תפתח את המצלמה והמיקרופון שלך בזרם וידאו חי ורציף.
+         הדפדפן יבקש הרשאה — יש לאשר גישה למצלמה ולמיקרופון.</p>
+      <button class="primary" id="startBtnBig" style="min-width:200px; font-size:1rem;">▶️ התחל שידור</button>
+    </div>
+
+    <div class="overlay-top">
+      <span class="chip" id="camChip" hidden>📹 מצלמה פעילה</span>
+      <span class="chip" id="micChip" hidden>🎙️ מיקרופון פעיל</span>
+      <span class="chip rec" id="recChip" hidden>⏺ מקליט…</span>
+    </div>
+
+    <div class="meter-wrap" id="meterWrap">
+      <canvas id="audioMeter"></canvas>
+    </div>
+  </section>
+
+  <!-- ====== פאנל שליטה ====== -->
+  <aside class="panel">
+    <div id="alerts"></div>
+
+    <div class="card">
+      <h2>🎛️ שליטה בשידור</h2>
+      <div class="controls-grid">
+        <button class="primary" id="startBtn">▶️ התחל שידור</button>
+        <button class="danger" id="stopBtn" disabled>⏹ עצור שידור</button>
+        <button id="micBtn" disabled>🎙️ השתק מיקרופון</button>
+        <button id="camBtn" disabled>📹 כבה מצלמה</button>
+        <button id="mirrorBtn">🪞 בטל מראה</button>
+        <button id="pipBtn" disabled>🗔 חלון צף</button>
+        <button id="fsBtn">⛶ מסך מלא</button>
+        <button id="recBtn" disabled>⏺ הקלט וידאו</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🔌 התקנים</h2>
+      <label class="field">מצלמה
+        <select id="camSelect" disabled><option>יתמלא לאחר מתן הרשאה…</option></select>
+      </label>
+      <label class="field">מיקרופון
+        <select id="micSelect" disabled><option>יתמלא לאחר מתן הרשאה…</option></select>
+      </label>
+    </div>
+
+    <div class="card">
+      <h2>🗣️ דיבור ← טקסט (זמן אמת)</h2>
+      <label class="field">שפת זיהוי
+        <select id="langSelect">
+          <option value="he-IL" selected>עברית (he-IL)</option>
+          <option value="en-US">English (en-US)</option>
+          <option value="ru-RU">Русский (ru-RU)</option>
+          <option value="ar-IL">العربية (ar-IL)</option>
+          <option value="fr-FR">Français (fr-FR)</option>
+          <option value="es-ES">Español (es-ES)</option>
+        </select>
+      </label>
+      <div class="transcript-box" id="transcript"></div>
+      <span class="listen-indicator" id="listenIndicator"><span class="dot"></span> מאזין לדיבור שלך…</span>
+      <div class="row">
+        <button id="sttBtn" disabled>🎧 התחל האזנה</button>
+        <button id="clearTranscriptBtn">🧹 נקה תמליל</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🔊 טקסט ← דיבור (המחשב מדבר אליך)</h2>
+      <label class="field">כתבו משהו והמחשב יקריא בקול
+        <input type="text" id="ttsInput" placeholder="למשל: שלום! השידור החי עובד מצוין" />
+      </label>
+      <div class="row">
+        <button id="ttsBtn">🔊 השמע בקול</button>
+        <button id="ttsStopBtn">🔇 הפסק</button>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  הכל רץ מקומית בדפדפן שלך — הווידאו והשמע לא נשלחים לשום שרת. ·
+  גישה למצלמה דורשת <b>HTTPS</b> או <code>localhost</code>. להרצה מקומית: <code>python3 -m http.server 8000</code> ואז לגלוש אל <code>http://localhost:8000/live-studio/</code> ·
+  זיהוי דיבור נתמך בצורה הטובה ביותר ב־Chrome / Edge.
+</footer>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------- אלמנטים ----------
+  const $ = (id) => document.getElementById(id);
+  const video = $("preview");
+  const placeholder = $("placeholder");
+  const alerts = $("alerts");
+  const liveBadge = $("liveBadge");
+  const timerEl = $("timer");
+  const statsEl = $("streamStats");
+  const meterWrap = $("meterWrap");
+  const meterCanvas = $("audioMeter");
+
+  const startBtn = $("startBtn"), startBtnBig = $("startBtnBig"), stopBtn = $("stopBtn");
+  const micBtn = $("micBtn"), camBtn = $("camBtn"), mirrorBtn = $("mirrorBtn");
+  const pipBtn = $("pipBtn"), fsBtn = $("fsBtn"), recBtn = $("recBtn");
+  const camSelect = $("camSelect"), micSelect = $("micSelect");
+  const camChip = $("camChip"), micChip = $("micChip"), recChip = $("recChip");
+
+  const sttBtn = $("sttBtn"), clearTranscriptBtn = $("clearTranscriptBtn");
+  const transcriptBox = $("transcript"), listenIndicator = $("listenIndicator");
+  const langSelect = $("langSelect");
+  const ttsInput = $("ttsInput"), ttsBtn = $("ttsBtn"), ttsStopBtn = $("ttsStopBtn");
+
+  // ---------- מצב ----------
+  let stream = null;
+  let audioCtx = null, analyser = null, meterRAF = 0;
+  let timerInterval = 0, startedAt = 0;
+  let recognition = null, sttActive = false;
+  let finalTranscript = "";
+  let recorder = null, recChunks = [];
+
+  // ---------- התראות ----------
+  function showAlert(kind, html, timeout) {
+    const el = document.createElement("div");
+    el.className = "alert " + kind;
+    el.innerHTML = html;
+    alerts.prepend(el);
+    if (timeout) setTimeout(() => el.remove(), timeout);
+    return el;
+  }
+
+  // ---------- בדיקות סביבה ----------
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showAlert("error", "הדפדפן הזה לא תומך בגישה למצלמה/מיקרופון (getUserMedia). נסו Chrome, Edge או Firefox עדכניים.");
+  } else if (!window.isSecureContext) {
+    showAlert("warn", "הדף לא רץ בהקשר מאובטח. מצלמה ומיקרופון עובדים רק תחת <b>HTTPS</b> או <b>localhost</b>.");
+  }
+
+  // ---------- שידור ----------
+  async function startStream() {
+    if (stream) return;
+    startBtn.disabled = startBtnBig.disabled = true;
+    try {
+      const videoConstraints = {
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        frameRate: { ideal: 30 },
+      };
+      const audioConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      };
+      if (camSelect.value && camSelect.dataset.ready) videoConstraints.deviceId = { exact: camSelect.value };
+      if (micSelect.value && micSelect.dataset.ready) audioConstraints.deviceId = { exact: micSelect.value };
+
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: videoConstraints,
+        audio: audioConstraints,
+      });
+
+      video.srcObject = stream;
+      placeholder.style.display = "none";
+      liveBadge.classList.add("on");
+      camChip.hidden = false;
+      micChip.hidden = false;
+
+      startedAt = Date.now();
+      timerInterval = setInterval(updateTimer, 500);
+      updateTimer();
+
+      startAudioMeter();
+      updateStats();
+
+      stopBtn.disabled = micBtn.disabled = camBtn.disabled = recBtn.disabled = false;
+      pipBtn.disabled = !document.pictureInPictureEnabled;
+      sttBtn.disabled = !getSpeechRecognitionCtor();
+
+      await populateDevices();
+
+      // אם המצלמה נשלפת/מתנתקת באמצע השידור
+      stream.getTracks().forEach((t) => (t.onended = () => {
+        showAlert("warn", "התקן (" + (t.kind === "video" ? "מצלמה" : "מיקרופון") + ") התנתק באמצע השידור.", 8000);
+      }));
+    } catch (err) {
+      handleMediaError(err);
+      startBtn.disabled = startBtnBig.disabled = false;
+    }
+  }
+
+  function stopStream() {
+    if (!stream) return;
+    stopRecording();
+    stopSTT();
+    stopAudioMeter();
+    stream.getTracks().forEach((t) => t.stop());
+    stream = null;
+    video.srcObject = null;
+
+    placeholder.style.display = "flex";
+    liveBadge.classList.remove("on");
+    camChip.hidden = micChip.hidden = true;
+    clearInterval(timerInterval);
+    timerEl.textContent = "";
+    statsEl.textContent = "";
+
+    startBtn.disabled = startBtnBig.disabled = false;
+    stopBtn.disabled = micBtn.disabled = camBtn.disabled = recBtn.disabled = pipBtn.disabled = sttBtn.disabled = true;
+    micBtn.textContent = "🎙️ השתק מיקרופון";
+    camBtn.textContent = "📹 כבה מצלמה";
+    micBtn.classList.remove("toggled");
+    camBtn.classList.remove("toggled");
+  }
+
+  function handleMediaError(err) {
+    const name = err && err.name;
+    if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+      showAlert("error", "נדחתה הרשאת גישה למצלמה/מיקרופון. יש ללחוץ על סמל המנעול 🔒 בשורת הכתובת ולאפשר גישה, ואז לרענן.");
+    } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+      showAlert("error", "לא נמצאה מצלמה או מיקרופון במחשב הזה. חברו התקן ונסו שוב.");
+    } else if (name === "NotReadableError" || name === "TrackStartError") {
+      showAlert("error", "המצלמה תפוסה על ידי תוכנה אחרת (זום? טימס?). סגרו אותה ונסו שוב.");
+    } else if (name === "OverconstrainedError") {
+      showAlert("error", "ההתקן שנבחר לא זמין. נסו לבחור התקן אחר מהרשימה.");
+    } else {
+      showAlert("error", "שגיאה בפתיחת השידור: " + (err && err.message ? err.message : err));
+    }
+  }
+
+  function updateTimer() {
+    const s = Math.floor((Date.now() - startedAt) / 1000);
+    const hh = String(Math.floor(s / 3600)).padStart(2, "0");
+    const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+    const ss = String(s % 60).padStart(2, "0");
+    timerEl.textContent = hh + ":" + mm + ":" + ss;
+  }
+
+  function updateStats() {
+    if (!stream) return;
+    const vt = stream.getVideoTracks()[0];
+    if (!vt) return;
+    const st = vt.getSettings();
+    const parts = [];
+    if (st.width && st.height) parts.push(st.width + "×" + st.height);
+    if (st.frameRate) parts.push(Math.round(st.frameRate) + "fps");
+    statsEl.textContent = parts.join(" · ");
+  }
+
+  // ---------- רשימת התקנים ----------
+  async function populateDevices() {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      fillSelect(camSelect, devices.filter((d) => d.kind === "videoinput"), "מצלמה");
+      fillSelect(micSelect, devices.filter((d) => d.kind === "audioinput"), "מיקרופון");
+    } catch (_) { /* לא קריטי */ }
+  }
+
+  function fillSelect(select, devices, fallbackLabel) {
+    const current = stream && (select === camSelect
+      ? stream.getVideoTracks()[0]?.getSettings().deviceId
+      : stream.getAudioTracks()[0]?.getSettings().deviceId);
+    select.innerHTML = "";
+    devices.forEach((d, i) => {
+      const opt = document.createElement("option");
+      opt.value = d.deviceId;
+      opt.textContent = d.label || fallbackLabel + " " + (i + 1);
+      if (d.deviceId === current) opt.selected = true;
+      select.appendChild(opt);
+    });
+    select.disabled = devices.length === 0;
+    select.dataset.ready = "1";
+  }
+
+  async function switchDevice() {
+    // מחליף התקן תוך כדי שידור: עוצר ומתחיל מחדש עם ההתקן הנבחר
+    if (!stream) return;
+    const wasListening = sttActive;
+    stopRecording();
+    stopSTT();
+    stopAudioMeter();
+    stream.getTracks().forEach((t) => t.stop());
+    stream = null;
+    try {
+      await startStream();
+      if (wasListening) startSTT();
+    } catch (err) {
+      handleMediaError(err);
+    }
+  }
+  camSelect.addEventListener("change", switchDevice);
+  micSelect.addEventListener("change", switchDevice);
+  if (navigator.mediaDevices) navigator.mediaDevices.addEventListener?.("devicechange", populateDevices);
+
+  // ---------- מד שמע חי ----------
+  function startAudioMeter() {
+    const at = stream.getAudioTracks()[0];
+    if (!at) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = audioCtx.createMediaStreamSource(new MediaStream([at]));
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    src.connect(analyser);
+    meterWrap.classList.add("on");
+
+    const ctx = meterCanvas.getContext("2d");
+    const data = new Uint8Array(analyser.frequencyBinCount);
+
+    function draw() {
+      meterRAF = requestAnimationFrame(draw);
+      const w = meterCanvas.width = meterCanvas.clientWidth * devicePixelRatio;
+      const h = meterCanvas.height = meterCanvas.clientHeight * devicePixelRatio;
+      analyser.getByteFrequencyData(data);
+      ctx.clearRect(0, 0, w, h);
+      const bars = 48;
+      const step = Math.floor(data.length / bars);
+      const barW = w / bars;
+      for (let i = 0; i < bars; i++) {
+        const v = data[i * step] / 255;
+        const bh = Math.max(2 * devicePixelRatio, v * h);
+        const grad = ctx.createLinearGradient(0, h, 0, 0);
+        grad.addColorStop(0, "#4dd6c1");
+        grad.addColorStop(1, "#7c5cff");
+        ctx.fillStyle = grad;
+        ctx.globalAlpha = 0.9;
+        ctx.fillRect(i * barW + barW * 0.15, h - bh, barW * 0.7, bh);
+      }
+    }
+    draw();
+  }
+
+  function stopAudioMeter() {
+    cancelAnimationFrame(meterRAF);
+    meterWrap.classList.remove("on");
+    if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
+    analyser = null;
+  }
+
+  // ---------- כפתורי שליטה ----------
+  startBtn.addEventListener("click", startStream);
+  startBtnBig.addEventListener("click", startStream);
+  stopBtn.addEventListener("click", stopStream);
+
+  micBtn.addEventListener("click", () => {
+    const at = stream?.getAudioTracks()[0];
+    if (!at) return;
+    at.enabled = !at.enabled;
+    micBtn.textContent = at.enabled ? "🎙️ השתק מיקרופון" : "🔇 בטל השתקה";
+    micBtn.classList.toggle("toggled", !at.enabled);
+    micChip.hidden = !at.enabled;
+  });
+
+  camBtn.addEventListener("click", () => {
+    const vt = stream?.getVideoTracks()[0];
+    if (!vt) return;
+    vt.enabled = !vt.enabled;
+    camBtn.textContent = vt.enabled ? "📹 כבה מצלמה" : "📷 הדלק מצלמה";
+    camBtn.classList.toggle("toggled", !vt.enabled);
+    camChip.hidden = !vt.enabled;
+  });
+
+  mirrorBtn.addEventListener("click", () => {
+    const mirrored = video.classList.toggle("mirrored");
+    mirrorBtn.textContent = mirrored ? "🪞 בטל מראה" : "🪞 הפעל מראה";
+  });
+
+  pipBtn.addEventListener("click", async () => {
+    try {
+      if (document.pictureInPictureElement) await document.exitPictureInPicture();
+      else await video.requestPictureInPicture();
+    } catch (_) {
+      showAlert("warn", "הדפדפן לא אפשר לפתוח חלון צף כרגע.", 5000);
+    }
+  });
+
+  fsBtn.addEventListener("click", () => {
+    const stage = $("stage");
+    if (document.fullscreenElement) document.exitFullscreen();
+    else stage.requestFullscreen?.();
+  });
+
+  // ---------- הקלטת וידאו ----------
+  function pickMime() {
+    const candidates = [
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm",
+      "video/mp4",
+    ];
+    return candidates.find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
+  }
+
+  recBtn.addEventListener("click", () => {
+    if (recorder && recorder.state === "recording") { stopRecording(); return; }
+    if (!stream) return;
+    if (!window.MediaRecorder) {
+      showAlert("warn", "הדפדפן לא תומך בהקלטה (MediaRecorder).", 6000);
+      return;
+    }
+    recChunks = [];
+    recorder = new MediaRecorder(stream, pickMime() ? { mimeType: pickMime() } : undefined);
+    recorder.ondataavailable = (e) => { if (e.data.size) recChunks.push(e.data); };
+    recorder.onstop = () => {
+      const type = recorder.mimeType || "video/webm";
+      const blob = new Blob(recChunks, { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      a.href = url;
+      a.download = "tutu-live-" + stamp + (type.includes("mp4") ? ".mp4" : ".webm");
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      recChip.hidden = true;
+      recBtn.textContent = "⏺ הקלט וידאו";
+      recBtn.classList.remove("toggled");
+    };
+    recorder.start(1000);
+    recChip.hidden = false;
+    recBtn.textContent = "⏹ עצור והורד";
+    recBtn.classList.add("toggled");
+  });
+
+  function stopRecording() {
+    if (recorder && recorder.state === "recording") recorder.stop();
+  }
+
+  // ---------- זיהוי דיבור (דיבור ← טקסט) ----------
+  function getSpeechRecognitionCtor() {
+    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  }
+
+  function renderTranscript(interim) {
+    transcriptBox.innerHTML = "";
+    if (finalTranscript) transcriptBox.appendChild(document.createTextNode(finalTranscript));
+    if (interim) {
+      const span = document.createElement("span");
+      span.className = "interim";
+      span.textContent = " " + interim;
+      transcriptBox.appendChild(span);
+    }
+    transcriptBox.scrollTop = transcriptBox.scrollHeight;
+  }
+
+  function startSTT() {
+    const Ctor = getSpeechRecognitionCtor();
+    if (!Ctor) {
+      showAlert("warn", "זיהוי דיבור לא נתמך בדפדפן הזה. מומלץ Chrome או Edge.", 8000);
+      return;
+    }
+    recognition = new Ctor();
+    recognition.lang = langSelect.value;
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    recognition.onresult = (event) => {
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const res = event.results[i];
+        if (res.isFinal) finalTranscript += (finalTranscript ? " " : "") + res[0].transcript.trim();
+        else interim += res[0].transcript;
+      }
+      renderTranscript(interim);
+    };
+
+    recognition.onerror = (event) => {
+      if (event.error === "no-speech" || event.error === "aborted") return; // לא קריטי, ההאזנה תמשיך
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        showAlert("error", "אין הרשאה לזיהוי דיבור. ודאו שהמיקרופון מאושר לדף הזה.");
+        stopSTT();
+      } else if (event.error === "network") {
+        showAlert("warn", "שירות זיהוי הדיבור דורש חיבור לאינטרנט. בודק שוב…", 6000);
+      }
+    };
+
+    // הדפדפן עוצר האזנה מדי פעם — מפעילים מחדש אוטומטית כל עוד המשתמש לא עצר
+    recognition.onend = () => {
+      if (sttActive) {
+        try { recognition.start(); } catch (_) { /* כבר רץ */ }
+      }
+    };
+
+    try { recognition.start(); } catch (_) {}
+    sttActive = true;
+    listenIndicator.classList.add("on");
+    sttBtn.textContent = "🛑 עצור האזנה";
+    sttBtn.classList.add("toggled");
+  }
+
+  function stopSTT() {
+    sttActive = false;
+    if (recognition) { try { recognition.stop(); } catch (_) {} recognition = null; }
+    listenIndicator.classList.remove("on");
+    sttBtn.textContent = "🎧 התחל האזנה";
+    sttBtn.classList.remove("toggled");
+    renderTranscript("");
+  }
+
+  sttBtn.addEventListener("click", () => (sttActive ? stopSTT() : startSTT()));
+
+  clearTranscriptBtn.addEventListener("click", () => {
+    finalTranscript = "";
+    renderTranscript("");
+  });
+
+  langSelect.addEventListener("change", () => {
+    if (sttActive) { stopSTT(); startSTT(); }
+  });
+
+  // ---------- טקסט ← דיבור ----------
+  function speak() {
+    const text = ttsInput.value.trim();
+    if (!text) return;
+    if (!window.speechSynthesis) {
+      showAlert("warn", "הקראה קולית לא נתמכת בדפדפן הזה.", 6000);
+      return;
+    }
+    const utter = new SpeechSynthesisUtterance(text);
+    const isHebrew = /[֐-׿]/.test(text);
+    utter.lang = isHebrew ? "he-IL" : langSelect.value;
+    const voices = speechSynthesis.getVoices();
+    const match = voices.find((v) => v.lang && v.lang.startsWith(utter.lang.split("-")[0]));
+    if (match) utter.voice = match;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utter);
+  }
+  ttsBtn.addEventListener("click", speak);
+  ttsInput.addEventListener("keydown", (e) => { if (e.key === "Enter") speak(); });
+  ttsStopBtn.addEventListener("click", () => window.speechSynthesis && speechSynthesis.cancel());
+  if (window.speechSynthesis) speechSynthesis.getVoices(); // טעינה מוקדמת של קולות
+
+  // ---------- ניקיון ----------
+  window.addEventListener("beforeunload", () => {
+    if (stream) stream.getTracks().forEach((t) => t.stop());
+  });
+})();
+</script>
+</body>
+</html>
