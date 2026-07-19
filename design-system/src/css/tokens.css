@@ -1,0 +1,44 @@
+/* Mana Yerba Mate — design tokens, extracted from en.manayerbamate.com */
+:root {
+  /* Base */
+  --mana-cream: #fef7e6;
+  --mana-ink: #0e0e0e;
+  --mana-white: #ffffff;
+  --mana-grey: #f1f1f1;
+
+  /* Flavours */
+  --mana-yellow: #ffd372; /* Grapefruit */
+  --mana-pink: #f6b1cf; /* Tropical Punch */
+  --mana-blue: #88c1f8; /* Blackberry & Hibiscus */
+  --mana-green: #acd084; /* Melon & Mint */
+
+  /* Accents */
+  --mana-magenta: #e72f63;
+  --mana-orange: #f15b40;
+  --mana-navy: #2b3d73;
+  --mana-forest: #195e1c;
+
+  /* Typography */
+  --mana-font: "Neue Montreal 2020", "Helvetica Neue", Arial, sans-serif;
+  --mana-text-xs: 12px;
+  --mana-text-sm: clamp(14px, 1.11vw, 18px);
+  --mana-text-md: clamp(16px, 1.32vw, 25px);
+  --mana-text-body: clamp(18px, 1.98vw, 38px);
+  --mana-subtitle: clamp(18px, 2.77vw, 53px);
+  --mana-title-product: clamp(40px, 3.96vw, 76px);
+  --mana-title-md: clamp(36px, 10vw, 200px);
+  --mana-title-lg: clamp(65px, 11.5vw, 222px);
+  --mana-title-xl: clamp(65px, 16.2vw, 317px);
+
+  /* Shape */
+  --mana-radius-pill: 2em;
+  --mana-radius-card: 7px;
+  --mana-radius-dialog: 0.75em;
+
+  /* Layout */
+  --mana-gutter: 20px;
+  --mana-wrapper: calc(100vw - 40px);
+
+  /* Motion */
+  --mana-ease-bounce: cubic-bezier(0.65, 0, 0.09, 1.38);
+}

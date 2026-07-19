@@ -1,0 +1,51 @@
+{
+  "projectId": "67609cf9-415e-4da3-9fa3-cc0637cbc9e6",
+  "shape": "package",
+  "pkg": "mana-yerba-mate-ds",
+  "globalName": "ManaDS",
+  "buildCmd": "npm run build",
+  "cssEntry": "dist/styles.css",
+  "tokensGlob": "src/css/tokens.css",
+  "extraFonts": [
+    "src/css/fonts.css"
+  ],
+  "overrides": {
+    "Header": {
+      "cardMode": "column"
+    },
+    "AnnouncementBar": {
+      "cardMode": "column"
+    },
+    "Marquee": {
+      "cardMode": "column"
+    },
+    "SubscribeBanner": {
+      "cardMode": "column"
+    },
+    "Footer": {
+      "cardMode": "column"
+    },
+    "Hero": {
+      "cardMode": "column"
+    },
+    "ProductGrid": {
+      "cardMode": "column"
+    },
+    "FeatureRow": {
+      "cardMode": "column"
+    },
+    "Button": {
+      "cardMode": "column"
+    },
+    "Card": {
+      "cardMode": "column"
+    },
+    "DisplayTitle": {
+      "cardMode": "column"
+    },
+    "ProductCard": {
+      "cardMode": "column"
+    }
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}

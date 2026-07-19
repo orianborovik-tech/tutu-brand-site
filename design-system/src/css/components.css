@@ -1,0 +1,802 @@
+/* Mana Yerba Mate — component styles */
+
+/* ---------- Base ---------- */
+.mana-root,
+.mana-root * {
+  box-sizing: border-box;
+}
+.mana-root {
+  font-family: var(--mana-font);
+  font-weight: 400;
+  font-size: var(--mana-text-md);
+  line-height: 1.16;
+  background: var(--mana-cream);
+  color: var(--mana-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Button ---------- */
+.mana-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  font-family: var(--mana-font);
+  font-weight: 400;
+  text-transform: uppercase;
+  line-height: 1;
+  border: 1px solid var(--mana-ink);
+  border-radius: var(--mana-radius-pill);
+  background: var(--mana-white);
+  color: var(--mana-ink);
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 0.3s var(--mana-ease-bounce), background 0.3s ease,
+    color 0.3s ease;
+}
+.mana-btn:hover {
+  transform: scale(1.05);
+}
+.mana-btn:active {
+  transform: scale(0.97);
+}
+.mana-btn--sm {
+  font-size: 13px;
+  padding: 0.62em 1.3em 0.55em;
+}
+.mana-btn--md {
+  font-size: 16px;
+  padding: 0.72em 1.5em 0.62em;
+}
+.mana-btn--lg {
+  font-size: var(--mana-text-md);
+  padding: 0.8em 1.7em 0.7em;
+}
+.mana-btn--white {
+  background: var(--mana-white);
+}
+.mana-btn--cream {
+  background: var(--mana-cream);
+}
+.mana-btn--yellow {
+  background: var(--mana-yellow);
+}
+.mana-btn--pink {
+  background: var(--mana-pink);
+}
+.mana-btn--blue {
+  background: var(--mana-blue);
+}
+.mana-btn--green {
+  background: var(--mana-green);
+}
+.mana-btn--magenta {
+  background: var(--mana-magenta);
+  color: var(--mana-white);
+}
+.mana-btn--orange {
+  background: var(--mana-orange);
+  color: var(--mana-white);
+}
+.mana-btn--ink {
+  background: var(--mana-ink);
+  color: var(--mana-white);
+}
+.mana-btn--outline {
+  background: transparent;
+}
+.mana-btn--outline.mana-btn--ink {
+  color: var(--mana-ink);
+}
+.mana-btn--outline.mana-btn--magenta {
+  color: var(--mana-magenta);
+  border-color: var(--mana-magenta);
+}
+.mana-btn--outline.mana-btn--orange {
+  color: var(--mana-orange);
+  border-color: var(--mana-orange);
+}
+.mana-btn[disabled],
+.mana-btn--disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+.mana-btn__arrow {
+  display: inline-block;
+  transform: translateY(-0.05em);
+}
+
+/* ---------- RoundButton ---------- */
+.mana-roundbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--mana-ink);
+  border-radius: 100%;
+  background: var(--mana-white);
+  color: var(--mana-ink);
+  font-family: var(--mana-font);
+  font-weight: 400;
+  text-transform: uppercase;
+  cursor: pointer;
+  position: relative;
+  flex: 0 0 auto;
+  transition: transform 0.3s var(--mana-ease-bounce), background 0.3s ease;
+  text-decoration: none;
+}
+.mana-roundbtn:hover {
+  transform: scale(1.08);
+}
+.mana-roundbtn--sm {
+  width: 44px;
+  height: 44px;
+  font-size: 13px;
+}
+.mana-roundbtn--md {
+  width: 56px;
+  height: 56px;
+  font-size: 16px;
+}
+.mana-roundbtn--lg {
+  width: 76px;
+  height: 76px;
+  font-size: 20px;
+}
+.mana-roundbtn--white {
+  background: var(--mana-white);
+}
+.mana-roundbtn--cream {
+  background: var(--mana-cream);
+}
+.mana-roundbtn--yellow {
+  background: var(--mana-yellow);
+}
+.mana-roundbtn--pink {
+  background: var(--mana-pink);
+}
+.mana-roundbtn--blue {
+  background: var(--mana-blue);
+}
+.mana-roundbtn--green {
+  background: var(--mana-green);
+}
+.mana-roundbtn--magenta {
+  background: var(--mana-magenta);
+  color: var(--mana-white);
+}
+.mana-roundbtn--orange {
+  background: var(--mana-orange);
+  color: var(--mana-white);
+}
+.mana-roundbtn--ink {
+  background: var(--mana-ink);
+  color: var(--mana-white);
+}
+.mana-roundbtn--borderless {
+  border-color: transparent;
+}
+
+/* ---------- Badge (pastille) ---------- */
+.mana-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: 100%;
+  background: var(--mana-ink);
+  color: var(--mana-white);
+  font-family: var(--mana-font);
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 1;
+}
+.mana-badge--yellow {
+  background: var(--mana-yellow);
+  color: var(--mana-ink);
+}
+.mana-badge--magenta {
+  background: var(--mana-magenta);
+  color: var(--mana-white);
+}
+.mana-badge--corner {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+}
+
+/* ---------- Tag ---------- */
+.mana-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  border-radius: var(--mana-radius-pill);
+  border: 1px solid var(--mana-ink);
+  font-family: var(--mana-font);
+  font-size: var(--mana-text-xs);
+  font-weight: 400;
+  text-transform: uppercase;
+  line-height: 1;
+  padding: 0.55em 1em 0.45em;
+  background: var(--mana-white);
+  color: var(--mana-ink);
+}
+.mana-tag--yellow {
+  background: var(--mana-yellow);
+}
+.mana-tag--pink {
+  background: var(--mana-pink);
+}
+.mana-tag--blue {
+  background: var(--mana-blue);
+}
+.mana-tag--green {
+  background: var(--mana-green);
+}
+.mana-tag--cream {
+  background: var(--mana-cream);
+}
+.mana-tag__dot {
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: 100%;
+  background: var(--mana-ink);
+}
+
+/* ---------- AnnouncementBar (bandeau) ---------- */
+.mana-announce {
+  display: block;
+  width: 100%;
+  position: relative;
+  text-align: center;
+  text-transform: uppercase;
+  font-family: var(--mana-font);
+  font-weight: 400;
+  font-size: clamp(12px, 1.05vw, 18px);
+  line-height: 1;
+  padding: 0.5em var(--mana-gutter) 0.4em;
+  background: var(--mana-ink);
+  color: var(--mana-cream);
+}
+.mana-announce a {
+  color: inherit;
+  text-decoration: underline;
+}
+.mana-announce--yellow {
+  background: var(--mana-yellow);
+  color: var(--mana-ink);
+}
+.mana-announce--pink {
+  background: var(--mana-pink);
+  color: var(--mana-ink);
+}
+.mana-announce--blue {
+  background: var(--mana-blue);
+  color: var(--mana-ink);
+}
+.mana-announce--green {
+  background: var(--mana-green);
+  color: var(--mana-ink);
+}
+.mana-announce--magenta {
+  background: var(--mana-magenta);
+  color: var(--mana-white);
+}
+.mana-announce__close {
+  position: absolute;
+  right: var(--mana-gutter);
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: 0;
+  color: inherit;
+  font-size: 1em;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* ---------- Header ---------- */
+.mana-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mana-gutter);
+  width: 100%;
+  padding: var(--mana-gutter);
+  font-family: var(--mana-font);
+  background: transparent;
+}
+.mana-header__logo {
+  font-weight: 500;
+  font-size: clamp(24px, 2.4vw, 40px);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: inherit;
+  text-decoration: none;
+}
+.mana-header__nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mana-header__cart {
+  position: relative;
+}
+
+/* ---------- DisplayTitle ---------- */
+.mana-title {
+  font-family: var(--mana-font);
+  font-weight: 300;
+  text-transform: uppercase;
+  line-height: 0.85;
+  margin: 0;
+  color: inherit;
+}
+.mana-title--xl {
+  font-size: var(--mana-title-xl);
+}
+.mana-title--lg {
+  font-size: var(--mana-title-lg);
+}
+.mana-title--md {
+  font-size: var(--mana-title-md);
+}
+.mana-title--sm {
+  font-size: var(--mana-title-product);
+}
+.mana-title__word {
+  display: inline-block;
+  white-space: nowrap;
+}
+.mana-title__letter {
+  display: inline-block;
+}
+
+/* ---------- Subtitle ---------- */
+.mana-subtitle {
+  font-family: var(--mana-font);
+  font-weight: 300;
+  text-transform: uppercase;
+  line-height: 1;
+  font-size: var(--mana-subtitle);
+  margin: 0;
+  color: inherit;
+}
+.mana-subtitle--sm {
+  font-size: clamp(16px, 1.6vw, 30px);
+}
+
+/* ---------- Marquee ---------- */
+.mana-marquee {
+  overflow: hidden;
+  width: 100%;
+  background: transparent;
+  border-top: 1px solid var(--mana-ink);
+  border-bottom: 1px solid var(--mana-ink);
+  padding: 0.35em 0 0.25em;
+}
+.mana-marquee--yellow {
+  background: var(--mana-yellow);
+}
+.mana-marquee--pink {
+  background: var(--mana-pink);
+}
+.mana-marquee--blue {
+  background: var(--mana-blue);
+}
+.mana-marquee--green {
+  background: var(--mana-green);
+}
+.mana-marquee--magenta {
+  background: var(--mana-magenta);
+  color: var(--mana-white);
+}
+.mana-marquee--ink {
+  background: var(--mana-ink);
+  color: var(--mana-cream);
+}
+.mana-marquee--borderless {
+  border-top: 0;
+  border-bottom: 0;
+}
+.mana-marquee__track {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: mana-marquee-scroll var(--mana-marquee-duration, 18s) linear
+    infinite;
+  will-change: transform;
+}
+.mana-marquee--reverse .mana-marquee__track {
+  animation-direction: reverse;
+}
+.mana-marquee__item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.6em;
+  padding-right: 0.6em;
+  font-family: var(--mana-font);
+  font-weight: 300;
+  text-transform: uppercase;
+  line-height: 1;
+  font-size: var(--mana-subtitle);
+}
+.mana-marquee__sep {
+  font-weight: 300;
+}
+@keyframes mana-marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ---------- ProductCard ---------- */
+.mana-product {
+  position: relative;
+  display: block;
+  aspect-ratio: 505 / 690;
+  overflow: hidden;
+  text-align: center;
+  border: 1px solid var(--mana-ink);
+  background: var(--mana-cream);
+  color: var(--mana-ink);
+  text-decoration: none;
+  font-family: var(--mana-font);
+}
+.mana-product--yellow {
+  background: var(--mana-yellow);
+}
+.mana-product--pink {
+  background: var(--mana-pink);
+}
+.mana-product--blue {
+  background: var(--mana-blue);
+}
+.mana-product--green {
+  background: var(--mana-green);
+}
+.mana-product--yellow .mana-product__art {
+  color: var(--mana-yellow);
+}
+.mana-product--pink .mana-product__art {
+  color: var(--mana-pink);
+}
+.mana-product--blue .mana-product__art {
+  color: var(--mana-blue);
+}
+.mana-product--green .mana-product__art {
+  color: var(--mana-green);
+}
+.mana-product__name {
+  position: relative;
+  z-index: 3;
+  display: block;
+  padding: 0.64em var(--mana-gutter) 0.2em;
+  font-weight: 300;
+  text-transform: uppercase;
+  line-height: 1;
+  font-size: clamp(22px, 2.3vw, 44px);
+}
+.mana-product__meta {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  gap: 1em;
+  font-size: var(--mana-text-sm);
+  font-weight: 400;
+}
+.mana-product__img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mana-product__art {
+  color: var(--mana-cream);
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  transform: translateX(-50%);
+  width: 52%;
+  height: auto;
+  z-index: 1;
+  transition: transform 0.4s var(--mana-ease-bounce);
+}
+.mana-product:hover .mana-product__art {
+  transform: translateX(-50%) rotate(-4deg) scale(1.04);
+}
+.mana-product__cta {
+  position: absolute;
+  z-index: 3;
+  left: calc(var(--mana-gutter) / 2);
+  bottom: calc(var(--mana-gutter) / 2);
+  border-radius: var(--mana-radius-pill);
+  padding: 0.9em 1.6em 0.8em;
+  font-size: clamp(13px, 1.31vw, 25px);
+  background: var(--mana-white);
+  color: var(--mana-ink);
+  text-transform: uppercase;
+  line-height: 1;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(50%);
+  transition: 0.3s var(--mana-ease-bounce);
+}
+.mana-product__ctaround {
+  position: absolute;
+  z-index: 3;
+  right: calc(var(--mana-gutter) / 2);
+  bottom: calc(var(--mana-gutter) / 2);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 100%;
+  background: var(--mana-white);
+  color: var(--mana-ink);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(50%);
+  transition: 0.3s var(--mana-ease-bounce) 0.07s;
+}
+.mana-product:hover .mana-product__cta,
+.mana-product:hover .mana-product__ctaround,
+.mana-product--cta .mana-product__cta,
+.mana-product--cta .mana-product__ctaround {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+.mana-product--cta .mana-product__ctaround {
+  transform: translateY(0);
+}
+
+/* ---------- ProductGrid ---------- */
+.mana-productgrid {
+  display: grid;
+  grid-template-columns: repeat(var(--mana-productgrid-cols, 3), 1fr);
+  width: 100%;
+}
+.mana-productgrid .mana-product {
+  border-right: 0;
+  border-bottom: 0;
+}
+.mana-productgrid {
+  border-right: 1px solid var(--mana-ink);
+  border-bottom: 1px solid var(--mana-ink);
+}
+
+/* ---------- FeatureItem ---------- */
+.mana-feature {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  font-family: var(--mana-font);
+  color: inherit;
+  max-width: 320px;
+}
+.mana-feature__icon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mana-feature__icon svg {
+  width: 100%;
+  height: 100%;
+}
+.mana-feature__title {
+  font-weight: 400;
+  text-transform: uppercase;
+  font-size: var(--mana-text-md);
+  line-height: 1;
+  margin: 0;
+}
+.mana-feature__text {
+  font-weight: 300;
+  font-size: var(--mana-text-sm);
+  line-height: 1.25;
+  margin: 0;
+}
+.mana-featurerow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(24px, 4vw, 80px);
+  padding: clamp(24px, 3vw, 60px) var(--mana-gutter);
+}
+
+/* ---------- SubscribeBanner ---------- */
+.mana-subscribe {
+  position: relative;
+  padding: clamp(40px, 6vw, 110px) var(--mana-gutter);
+  text-align: center;
+  background: var(--mana-yellow);
+  color: var(--mana-ink);
+  font-family: var(--mana-font);
+  overflow: hidden;
+}
+.mana-subscribe--pink {
+  background: var(--mana-pink);
+}
+.mana-subscribe--blue {
+  background: var(--mana-blue);
+}
+.mana-subscribe--green {
+  background: var(--mana-green);
+}
+.mana-subscribe--cream {
+  background: var(--mana-cream);
+}
+.mana-subscribe--magenta {
+  background: var(--mana-magenta);
+  color: var(--mana-white);
+}
+.mana-subscribe__text {
+  font-weight: 300;
+  font-size: var(--mana-text-body);
+  line-height: 1.16;
+  max-width: 26em;
+  margin: 0.8em auto 1.2em;
+}
+.mana-subscribe__note {
+  display: block;
+  margin-top: 1.6em;
+  font-size: var(--mana-text-xs);
+  font-weight: 400;
+}
+
+/* ---------- Card ---------- */
+.mana-card {
+  background: var(--mana-white);
+  color: var(--mana-ink);
+  border-radius: var(--mana-radius-dialog);
+  font-family: var(--mana-font);
+  font-size: var(--mana-text-sm);
+  line-height: 1.3;
+}
+.mana-card--bordered {
+  border: 1px solid var(--mana-ink);
+}
+.mana-card--sm {
+  padding: 12px;
+}
+.mana-card--md {
+  padding: 20px;
+}
+.mana-card--lg {
+  padding: 32px;
+}
+
+/* ---------- QuantitySelector ---------- */
+.mana-qty {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--mana-ink);
+  border-radius: var(--mana-radius-pill);
+  background: var(--mana-white);
+  font-family: var(--mana-font);
+  font-size: 16px;
+  line-height: 1;
+}
+.mana-qty__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2em;
+  height: 2.2em;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  padding: 0;
+}
+.mana-qty__value {
+  min-width: 1.6em;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* ---------- Footer ---------- */
+.mana-footer {
+  position: relative;
+  background: var(--mana-cream);
+  color: var(--mana-ink);
+  font-family: var(--mana-font);
+  padding: clamp(40px, 6vw, 100px) var(--mana-gutter) var(--mana-gutter);
+  overflow: hidden;
+}
+.mana-footer__socials {
+  display: flex;
+  gap: 10px;
+  margin-bottom: clamp(30px, 5vw, 80px);
+}
+.mana-footer__title {
+  text-align: center;
+  margin: 0 0 clamp(30px, 5vw, 80px);
+}
+.mana-footer__rule {
+  border: 0;
+  border-top: 1px solid var(--mana-ink);
+  margin: 0 0 var(--mana-gutter);
+}
+.mana-footer__bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mana-gutter);
+  font-size: var(--mana-text-sm);
+  font-weight: 400;
+}
+.mana-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mana-gutter);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.mana-footer__links a {
+  color: inherit;
+  text-decoration: none;
+}
+.mana-footer__links a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Hero ---------- */
+.mana-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: clamp(16px, 2vw, 36px);
+  padding: clamp(50px, 8vw, 140px) var(--mana-gutter);
+  background: var(--mana-cream);
+  color: var(--mana-ink);
+  font-family: var(--mana-font);
+  overflow: hidden;
+}
+.mana-hero--yellow {
+  background: var(--mana-yellow);
+}
+.mana-hero--pink {
+  background: var(--mana-pink);
+}
+.mana-hero--blue {
+  background: var(--mana-blue);
+}
+.mana-hero--green {
+  background: var(--mana-green);
+}
+.mana-hero__subtitle {
+  font-weight: 300;
+  font-size: var(--mana-text-body);
+  line-height: 1.16;
+  max-width: 28em;
+  margin: 0;
+}
+.mana-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
