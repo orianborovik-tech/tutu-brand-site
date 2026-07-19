@@ -5,3 +5,5 @@ ds-bundle/
 .design-sync/node_modules
 node_modules/
 design-system/dist/
+.design-sync/chunk-*.json
+.design-sync/upload-manifest.txt
