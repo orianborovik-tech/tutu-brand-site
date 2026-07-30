@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 640" font-family="Arial, sans-serif">
-  <rect x="0" y="0" width="1000" height="640" fill="#f8fafc"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" font-family="Arial, sans-serif">
+  <rect x="0" y="0" width="1000" height="700" fill="#f8fafc"/>
   <text x="500" y="40" text-anchor="middle" font-size="24" font-weight="bold" fill="#1e293b">חיווט: NodeMCU + דרייבר L9110S (רכב 2 מנועים)</text>
 
   <!-- NodeMCU -->
@@ -13,17 +13,15 @@
   <circle cx="210" cy="310" r="5" fill="#111827"/><text x="196" y="315" text-anchor="end" font-size="15" font-weight="bold" fill="#1e293b">GND</text>
   <circle cx="210" cy="350" r="5" fill="#dc2626"/><text x="196" y="355" text-anchor="end" font-size="15" font-weight="bold" fill="#1e293b">Vin</text>
 
-  <!-- L9110S -->
+  <!-- L9110S: one 6-pin header -->
   <rect x="450" y="80" width="190" height="280" rx="12" fill="#ecfdf5" stroke="#059669" stroke-width="3"/>
   <text x="545" y="110" text-anchor="middle" font-size="18" font-weight="bold" fill="#065f46">L9110S</text>
-  <circle cx="450" cy="150" r="5" fill="#2563eb"/><text x="464" y="155" font-size="14" font-weight="bold" fill="#1e293b">A-1A</text>
-  <circle cx="450" cy="190" r="5" fill="#16a34a"/><text x="464" y="195" font-size="14" font-weight="bold" fill="#1e293b">A-1B</text>
-  <circle cx="450" cy="230" r="5" fill="#ea580c"/><text x="464" y="235" font-size="14" font-weight="bold" fill="#1e293b">B-1A</text>
-  <circle cx="450" cy="270" r="5" fill="#9333ea"/><text x="464" y="275" font-size="14" font-weight="bold" fill="#1e293b">B-1B</text>
-  <circle cx="450" cy="310" r="5" fill="#111827"/><text x="464" y="315" font-size="14" font-weight="bold" fill="#1e293b">GND</text>
-  <!-- battery pins on bottom -->
-  <circle cx="500" cy="360" r="5" fill="#dc2626"/><text x="500" y="345" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e293b">VCC</text>
-  <circle cx="580" cy="360" r="5" fill="#111827"/><text x="580" y="345" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e293b">GND</text>
+  <circle cx="450" cy="150" r="5" fill="#2563eb"/><text x="464" y="155" font-size="14" font-weight="bold" fill="#1e293b">A-IA</text>
+  <circle cx="450" cy="190" r="5" fill="#16a34a"/><text x="464" y="195" font-size="14" font-weight="bold" fill="#1e293b">A-IB</text>
+  <circle cx="450" cy="230" r="5" fill="#ea580c"/><text x="464" y="235" font-size="14" font-weight="bold" fill="#1e293b">B-IA</text>
+  <circle cx="450" cy="270" r="5" fill="#9333ea"/><text x="464" y="275" font-size="14" font-weight="bold" fill="#1e293b">B-IB</text>
+  <circle cx="450" cy="305" r="5" fill="#111827"/><text x="464" y="310" font-size="14" font-weight="bold" fill="#1e293b">GND</text>
+  <circle cx="450" cy="340" r="5" fill="#dc2626"/><text x="464" y="345" font-size="14" font-weight="bold" fill="#1e293b">VCC</text>
   <!-- motor terminals on right -->
   <circle cx="640" cy="150" r="5" fill="#64748b"/>
   <circle cx="640" cy="175" r="5" fill="#64748b"/>
@@ -32,13 +30,11 @@
   <circle cx="640" cy="270" r="5" fill="#64748b"/>
   <text x="628" y="235" text-anchor="end" font-size="13" fill="#475569">MOTOR B</text>
 
-  <!-- signal wires -->
+  <!-- signal wires (straight) -->
   <line x1="210" y1="150" x2="450" y2="150" stroke="#2563eb" stroke-width="4"/>
   <line x1="210" y1="190" x2="450" y2="190" stroke="#16a34a" stroke-width="4"/>
   <line x1="210" y1="230" x2="450" y2="230" stroke="#ea580c" stroke-width="4"/>
   <line x1="210" y1="270" x2="450" y2="270" stroke="#9333ea" stroke-width="4"/>
-  <line x1="210" y1="310" x2="450" y2="310" stroke="#111827" stroke-width="4"/>
-  <text x="330" y="305" text-anchor="middle" font-size="13" fill="#334155">אדמה משותפת ⚠</text>
 
   <!-- motors -->
   <rect x="790" y="120" width="160" height="70" rx="10" fill="#fef9c3" stroke="#ca8a04" stroke-width="3"/>
@@ -52,21 +48,35 @@
   <line x1="640" y1="245" x2="790" y2="240" stroke="#64748b" stroke-width="4"/>
   <line x1="640" y1="270" x2="790" y2="265" stroke="#64748b" stroke-width="4"/>
 
-  <!-- battery -->
-  <rect x="430" y="470" width="240" height="80" rx="10" fill="#fee2e2" stroke="#b91c1c" stroke-width="3"/>
-  <text x="550" y="505" text-anchor="middle" font-size="16" font-weight="bold" fill="#7f1d1d">בית סוללות 4×AA</text>
-  <text x="550" y="528" text-anchor="middle" font-size="14" fill="#991b1b">6V</text>
-  <circle cx="470" cy="470" r="6" fill="#dc2626"/><text x="470" y="458" text-anchor="middle" font-size="16" font-weight="bold" fill="#dc2626">+</text>
-  <circle cx="640" cy="470" r="6" fill="#111827"/><text x="640" y="458" text-anchor="middle" font-size="16" font-weight="bold" fill="#111827">−</text>
+  <!-- breadboard with two rows -->
+  <rect x="245" y="455" width="215" height="95" rx="8" fill="#fff7ed" stroke="#b45309" stroke-width="3"/>
+  <text x="352" y="475" text-anchor="middle" font-size="14" font-weight="bold" fill="#92400e">לוח ניסוי</text>
+  <line x1="260" y1="490" x2="450" y2="490" stroke="#111827" stroke-width="5"/>
+  <text x="340" y="507" font-size="12" fill="#334155">שורת המינוס (−)</text>
+  <line x1="260" y1="525" x2="450" y2="525" stroke="#dc2626" stroke-width="5"/>
+  <text x="340" y="542" font-size="12" fill="#b91c1c">שורת הפלוס (+)</text>
 
-  <!-- battery plus: to VCC and to Vin -->
-  <polyline points="470,470 470,440 500,440 500,360" fill="none" stroke="#dc2626" stroke-width="4"/>
-  <polyline points="470,440 240,440 240,350 210,350" fill="none" stroke="#dc2626" stroke-width="4"/>
-  <circle cx="470" cy="440" r="5" fill="#dc2626"/>
-  <text x="345" y="432" text-anchor="middle" font-size="13" fill="#b91c1c">הפלוס מתפצל: גם לדרייבר וגם ל-Vin</text>
-  <!-- battery minus: to driver GND -->
-  <polyline points="640,470 640,440 580,440 580,360" fill="none" stroke="#111827" stroke-width="4"/>
+  <!-- NodeMCU GND to minus row -->
+  <polyline points="210,310 240,310 240,490 260,490" fill="none" stroke="#111827" stroke-width="4"/>
+  <!-- NodeMCU Vin to plus row -->
+  <polyline points="210,350 228,350 228,525 260,525" fill="none" stroke="#dc2626" stroke-width="4"/>
+  <!-- Driver GND to minus row -->
+  <polyline points="450,305 430,305 430,490" fill="none" stroke="#111827" stroke-width="4"/>
+  <circle cx="430" cy="490" r="5" fill="#111827"/>
+  <!-- Driver VCC to plus row (crosses minus row without a dot = not connected) -->
+  <polyline points="450,340 438,340 438,525" fill="none" stroke="#dc2626" stroke-width="4"/>
+  <circle cx="438" cy="525" r="5" fill="#dc2626"/>
 
-  <text x="500" y="600" text-anchor="middle" font-size="15" fill="#334155">⚠ כל החוטים השחורים (GND) מחוברים יחד — אם ללוח יש רק פין GND אחד, מחברים את שניהם אליו דרך לוח ניסוי</text>
-  <text x="500" y="625" text-anchor="middle" font-size="14" fill="#64748b">מחווטים רק כשהכול כבוי: בלי סוללות ובלי USB</text>
+  <!-- battery to the right of the breadboard -->
+  <rect x="530" y="460" width="210" height="90" rx="10" fill="#fee2e2" stroke="#b91c1c" stroke-width="3"/>
+  <text x="635" y="495" text-anchor="middle" font-size="16" font-weight="bold" fill="#7f1d1d">בית סוללות 4×AA</text>
+  <text x="635" y="520" text-anchor="middle" font-size="14" fill="#991b1b">6V</text>
+  <circle cx="530" cy="490" r="6" fill="#111827"/><text x="545" y="483" font-size="15" font-weight="bold" fill="#111827">−</text>
+  <circle cx="530" cy="525" r="6" fill="#dc2626"/><text x="545" y="540" font-size="15" font-weight="bold" fill="#dc2626">+</text>
+  <line x1="450" y1="490" x2="530" y2="490" stroke="#111827" stroke-width="4"/>
+  <line x1="450" y1="525" x2="530" y2="525" stroke="#dc2626" stroke-width="4"/>
+
+  <text x="500" y="605" text-anchor="middle" font-size="14" fill="#334155">סדר 6 הפינים על הדרייבר משתנה בין לוחות — ללכת לפי הכיתוב. האות I נראית לפעמים כמו הספרה 1 (זה אותו פין).</text>
+  <text x="500" y="630" text-anchor="middle" font-size="14" fill="#334155">● נקודה = חוטים מחוברים יחד. חוט שחוצה חוט בלי נקודה — לא מחובר.</text>
+  <text x="500" y="655" text-anchor="middle" font-size="14" fill="#64748b">מחווטים רק כשהכול כבוי: בלי סוללות ובלי USB</text>
 </svg>

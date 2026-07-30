@@ -41,6 +41,14 @@ const bool R_REVERSED = false;
 // מתחת לערך הזה המנוע רק מזמזם ולא זז. אם הרכב "חלש" בהתחלה — תעלו קצת.
 const int MIN_PWM = 70;
 
+// פקודות קטנות מזה נחשבות "עצור" (אזור מת של הג'ויסטיק)
+const int DEADZONE = 5;
+
+// האצה/האטה הדרגתית: כמה מותר לשנות את המהירות בכל צעד, וכל כמה זמן צעד.
+// בלי זה, היפוך פתאומי ממהירות מלאה גורם לזינוק זרם שמפיל את הסוללות.
+const int SLEW_STEP = 20;
+const unsigned long SLEW_INTERVAL_MS = 15;
+
 // ביטחון: אם לא הגיעה פקודה מהטלפון תוך הזמן הזה (במילישניות) — הרכב עוצר.
 // ככה אם ה-WiFi מתנתק, הרכב לא בורח לבד.
 const unsigned long FAILSAFE_MS = 600;
@@ -54,8 +62,15 @@ IPAddress apIP(192, 168, 4, 1);
 unsigned long lastCommandTime = 0;
 bool motorsRunning = false;
 
+// המהירות שהטלפון ביקש (יעד) לעומת המהירות בפועל (מתקרבת ליעד בהדרגה)
+int targetLeft = 0, targetRight = 0;
+int currentLeft = 0, currentRight = 0;
+unsigned long lastSlewTime = 0;
+
 // עצירה מוחלטת של שני המנועים
 void stopMotors() {
+  targetLeft = targetRight = 0;
+  currentLeft = currentRight = 0;
   digitalWrite(L_PIN_FWD, LOW);
   digitalWrite(L_PIN_BACK, LOW);
   digitalWrite(R_PIN_FWD, LOW);
@@ -68,7 +83,7 @@ void driveMotor(int pinFwd, int pinBack, int value, bool reversed) {
   if (reversed) value = -value;
 
   int magnitude = abs(value);
-  if (magnitude < 5) {                 // אזור מת — נחשב עצירה
+  if (magnitude < DEADZONE) {          // אזור מת — נחשב עצירה
     digitalWrite(pinFwd, LOW);
     digitalWrite(pinBack, LOW);
     return;
@@ -87,27 +102,52 @@ void driveMotor(int pinFwd, int pinBack, int value, bool reversed) {
   }
 }
 
-// מקבל את מיקום הג'ויסטיק והופך אותו למהירות לכל מנוע
+int clamp100(int v) {
+  if (v >  100) return  100;
+  if (v < -100) return -100;
+  return v;
+}
+
+// מקבל את מיקום הג'ויסטיק וקובע מהירות-יעד לכל מנוע
 // x: 100- (שמאלה) עד 100+ (ימינה), y: 100- (אחורה) עד 100+ (קדימה)
 // s: מגבלת מהירות באחוזים (20..100)
 void applyDrive(int x, int y, int s) {
-  // ערבוב טנק קלאסי: פנייה = גלגל אחד מהר יותר מהשני
-  long left  = (long)y + x;
-  long right = (long)y - x;
+  x = clamp100(x);
+  y = clamp100(y);
 
-  if (left  >  100) left  =  100;
-  if (left  < -100) left  = -100;
-  if (right >  100) right =  100;
-  if (right < -100) right = -100;
+  // ערבוב טנק קלאסי: פנייה = גלגל אחד מהר יותר מהשני
+  int left  = clamp100(y + x);
+  int right = clamp100(y - x);
 
   if (s < 0)   s = 0;
   if (s > 100) s = 100;
-  left  = left  * s / 100;
-  right = right * s / 100;
+  targetLeft  = left  * s / 100;
+  targetRight = right * s / 100;
+}
 
-  driveMotor(L_PIN_FWD, L_PIN_BACK, (int)left,  L_REVERSED);
-  driveMotor(R_PIN_FWD, R_PIN_BACK, (int)right, R_REVERSED);
-  motorsRunning = (left != 0 || right != 0);
+// צעד אחד של התקרבות אל מהירות היעד
+int slewToward(int current, int target) {
+  if (current < target) {
+    current += SLEW_STEP;
+    if (current > target) current = target;
+  } else if (current > target) {
+    current -= SLEW_STEP;
+    if (current < target) current = target;
+  }
+  return current;
+}
+
+// רץ כל הזמן מה-loop: מקרב את המנועים בהדרגה למהירות היעד
+void updateMotors() {
+  if (millis() - lastSlewTime < SLEW_INTERVAL_MS) return;
+  lastSlewTime = millis();
+
+  currentLeft  = slewToward(currentLeft,  targetLeft);
+  currentRight = slewToward(currentRight, targetRight);
+
+  driveMotor(L_PIN_FWD, L_PIN_BACK, currentLeft,  L_REVERSED);
+  driveMotor(R_PIN_FWD, R_PIN_BACK, currentRight, R_REVERSED);
+  motorsRunning = (abs(currentLeft) >= DEADZONE || abs(currentRight) >= DEADZONE);
 }
 
 // ---------- דף השליטה (נשלח לטלפון) ----------
@@ -191,6 +231,7 @@ const char CONTROL_PAGE[] PROGMEM = R"rawliteral(<!DOCTYPE html>
   var x = 0, y = 0;          // -100..100 (y חיובי = קדימה)
   var active = false;
   var inflight = false;
+  var inflightSince = 0;
   var okCount = 0, failCount = 0;
 
   spdSlider.addEventListener('input', function(){
@@ -247,9 +288,11 @@ const char CONTROL_PAGE[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     setKnob(x/100, -y/100);
   }
   document.addEventListener('keydown', function(e){
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
     if (e.key.indexOf('Arrow') === 0) { keys[e.key] = true; keysToXY(); e.preventDefault(); }
   });
   document.addEventListener('keyup', function(e){
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
     if (e.key.indexOf('Arrow') === 0) { keys[e.key] = false; keysToXY(); e.preventDefault(); }
   });
 
@@ -268,12 +311,16 @@ const char CONTROL_PAGE[] PROGMEM = R"rawliteral(<!DOCTYPE html>
   }
 
   function send(force) {
-    if (inflight && !force) return;
+    // בקשה שנתקעה יותר מחצי שנייה לא חוסמת את הבאות (חשוב ברשת חלשה)
+    if (inflight && !force && (Date.now() - inflightSince) < 500) return;
     inflight = true;
+    inflightSince = Date.now();
+    var controller = new AbortController();
+    var timer = setTimeout(function(){ controller.abort(); }, 400);
     var url = '/drive?x=' + x + '&y=' + y + '&s=' + spdSlider.value;
-    fetch(url, { cache: 'no-store' })
-      .then(function(r){ setStatus(r.ok); inflight = false; })
-      .catch(function(){ setStatus(false); inflight = false; });
+    fetch(url, { cache: 'no-store', signal: controller.signal })
+      .then(function(r){ clearTimeout(timer); setStatus(r.ok); inflight = false; })
+      .catch(function(){ clearTimeout(timer); setStatus(false); inflight = false; });
   }
 
   // שולחים פקודה כל 120 אלפיות שנייה — גם כשעומדים,
@@ -311,16 +358,18 @@ void handleNotFound() {
 }
 
 void setup() {
-  Serial.begin(115200);
-  delay(100);
-  Serial.println();
-  Serial.println("TUTU CAR starting...");
-
+  // קודם כל, לפני כל דבר אחר: להשתיק את המנועים
+  // (אחרת הם עלולים לרטוט לרגע בהדלקה)
   pinMode(L_PIN_FWD, OUTPUT);
   pinMode(L_PIN_BACK, OUTPUT);
   pinMode(R_PIN_FWD, OUTPUT);
   pinMode(R_PIN_BACK, OUTPUT);
   stopMotors();
+
+  Serial.begin(115200);
+  delay(100);
+  Serial.println();
+  Serial.println("TUTU CAR starting...");
 
   // טווח PWM אחיד של 0..255 בכל גרסאות הספרייה
   analogWriteRange(255);
@@ -340,6 +389,10 @@ void setup() {
   server.onNotFound(handleNotFound);
   server.begin();
 
+  // הנורה הכחולה על הלוח נדלקת = הרשת מוכנה (בנורה הזאת LOW = דולק)
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
+
   Serial.print("WiFi network: ");
   Serial.println(AP_SSID);
   Serial.println("Control page: http://192.168.4.1");
@@ -348,9 +401,11 @@ void setup() {
 void loop() {
   dnsServer.processNextRequest();
   server.handleClient();
+  updateMotors();
 
   // ביטחון: אין פקודות מהטלפון? עוצרים.
-  if (motorsRunning && (millis() - lastCommandTime > FAILSAFE_MS)) {
+  if ((motorsRunning || targetLeft != 0 || targetRight != 0)
+      && (millis() - lastCommandTime > FAILSAFE_MS)) {
     stopMotors();
     Serial.println("Failsafe: no commands, motors stopped");
   }
