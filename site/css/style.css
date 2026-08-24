@@ -95,11 +95,11 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 .btn--round svg { width: 20px; height: 20px; }
 
-/* label slide-swap on hover (two stacked labels) */
-.btn .lbl { position: relative; display: inline-block; overflow: hidden; }
-.btn .lbl span { display: block; transition: transform .4s var(--ease-spring); }
-.btn .lbl span:last-child { position: absolute; inset-inline-start: 0; top: 100%; }
-.btn:hover .lbl span { transform: translateY(-100%); }
+/* label slide-swap on hover (two stacked labels) — used by .btn and .scene-pill */
+.lbl { position: relative; display: inline-block; overflow: hidden; vertical-align: bottom; }
+.lbl span { display: block; transition: transform .4s var(--ease-spring); }
+.lbl span:last-child { position: absolute; inset-inline-start: 0; top: 100%; }
+.btn:hover .lbl span, .scene-pill:hover .lbl span { transform: translateY(-100%); }
 
 /* ---------- Preloader / intro ---------- */
 #transition {
