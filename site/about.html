@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>הסיפור של האודון שלנו | Taste of Asia</title>
+  <meta name="description" content="איך אטריית חיטה יפנית בת אלף שנה הגיעה למטבח הישראלי — הסיפור של אטריות האודון המוכנות של Taste of Asia.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23CE2127'/%3E%3Cpath d='M6 17h20a10 10 0 0 1-20 0z' fill='%23FBF2E0'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main id="main">
+    <section class="page-hero">
+      <h1 class="reveal" data-i18n="about.title">הסיפור של האודון שלנו</h1>
+      <p class="reveal" data-i18n="about.intro">אודון נולד ביפן לפני יותר מאלף שנה — אטריית חיטה עבה, פשוטה וממכרת, שהפכה למאכל נחמה לאומי.</p>
+    </section>
+
+    <div class="prose">
+      <div class="ph reveal" data-img-slot="about-hero" style="aspect-ratio:16/9;border:2px solid var(--ink);border-radius:var(--radius);margin-bottom:2.5rem">🍜 about-hero — סצנת הכנת אודון</div>
+      <p class="reveal" data-i18n="about.p1">ב-Taste of Asia האמנו שגם מטבח ביתי בישראל יכול לקבל אודון אמיתי: לא מיובש, לא מקופסה — אלא טרי, רך וקפיצי, שמוכן תוך דקה.</p>
+      <p class="reveal" data-i18n="about.p2">האטריות שלנו מיוצרות מקמח חיטה איכותי, מבושלות בעדינות ונארזות באריזה אטומה ששומרת על הטריות — בכשרות KF, פרווה.</p>
+
+      <div class="stats reveal">
+        <div class="stat"><b data-i18n="about.stat1.n">60</b><span data-i18n="about.stat1.t">שניות להכנה</span></div>
+        <div class="stat"><b data-i18n="about.stat2.n">200</b><span data-i18n="about.stat2.t">גרם בכל שקית</span></div>
+        <div class="stat"><b data-i18n="about.stat3.n">3</b><span data-i18n="about.stat3.t">דרכי הגשה: ווק, מרק, קר</span></div>
+      </div>
+
+      <h2 class="reveal" data-i18n="about.h2">מה מיוחד באודון?</h2>
+      <p class="reveal" data-i18n="about.p3">העובי. אטריית אודון עבה פי ארבעה מאטריה רגילה, ולכן היא סופגת רטבים בלי להתפרק ונשארת נגיסה גם במרק רותח. זה מה שהופך אותה למלכת ההקפצות.</p>
+    </div>
+
+    <!-- curved scroll marquee (analog of the original's textPath-on-arc) -->
+    <div class="curve-marquee js-curve-marquee" aria-hidden="true">
+      <svg viewBox="0 0 1440 190" width="100%">
+        <path id="aboutCurve" d="M-40,60 C400,190 1040,190 1480,60" fill="none"></path>
+        <text><textPath href="#aboutCurve" startOffset="0%">אפקט ההקפצה · אפקט המרק · אפקט הנחמה · אפקט ההקפצה · אפקט המרק · אפקט הנחמה · אפקט ההקפצה · אפקט המרק · אפקט הנחמה</textPath></text>
+      </svg>
+    </div>
+
+    <!-- full-width parallax band -->
+    <div class="imgfull">
+      <div class="ph js-parallax" data-img-slot="about-full">🍜 about-full — שדה חיטה / מטבח יפני רחב</div>
+    </div>
+
+    <div class="prose" style="padding-top:3rem">
+      <p class="reveal" style="text-align:center;display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+        <a class="btn btn--pop" href="faq.html" data-i18n="nav.faq">שאלות ותשובות</a>
+        <a class="btn btn--red btn--pop btn--big" href="product.html" data-i18n="hero.cta">לקנות עכשיו</a>
+      </p>
+    </div>
+  </main>
+  <script src="js/data.js"></script>
+  <script src="js/partials.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>צרו קשר | Taste of Asia</title>
+  <meta name="description" content="שאלה? מתכון? שיתוף פעולה? צרו קשר עם Taste of Asia.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23CE2127'/%3E%3Cpath d='M6 17h20a10 10 0 0 1-20 0z' fill='%23FBF2E0'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="contact-page">
+  <main id="main">
+    <section class="page-hero">
+      <h1 class="reveal" data-i18n="contact.title">צרו קשר</h1>
+      <p class="reveal" data-i18n="contact.intro">שאלה? מתכון? שיתוף פעולה? נשמח לשמוע מכם.</p>
+    </section>
+
+    <div class="contact-grid">
+      <form class="contact-form js-contact reveal">
+        <div class="field">
+          <label for="cname" data-i18n="contact.name">שם מלא</label>
+          <input id="cname" type="text" required>
+        </div>
+        <div class="field">
+          <label for="cemail" data-i18n="contact.email">אימייל</label>
+          <input id="cemail" type="email" required>
+        </div>
+        <div class="field">
+          <label for="cmsg" data-i18n="contact.message">הודעה</label>
+          <textarea id="cmsg" required></textarea>
+        </div>
+        <button class="btn btn--red btn--pop btn--big" type="submit" data-i18n="contact.send">שליחה</button>
+      </form>
+      <aside class="contact-aside reveal">
+        <h2 data-i18n="contact.details">פרטי התקשרות</h2>
+        <p>✉ <span data-i18n="contact.mail">hello@tasteofasia.co.il</span></p>
+        <p>✆ <span data-i18n="contact.phone">03-1234567</span></p>
+        <p style="margin-top:1.4rem"><a class="btn" href="stores.html" data-i18n="nav.stores">נקודות מכירה</a></p>
+      </aside>
+    </div>
+  </main>
+  <script src="js/data.js"></script>
+  <script src="js/partials.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

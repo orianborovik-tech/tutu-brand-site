@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>נקודות מכירה | Taste of Asia</title>
+  <meta name="description" content="איפה קונים את אטריות האודון המוכנות של Taste of Asia — רשתות שיווק, חנויות אסייתיות ומעדניות בכל הארץ.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23CE2127'/%3E%3Cpath d='M6 17h20a10 10 0 0 1-20 0z' fill='%23FBF2E0'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main id="main">
+    <section class="page-hero">
+      <h1 class="reveal" data-i18n="stores.title">נקודות מכירה</h1>
+      <p class="reveal"><span data-i18n="stores.intro">האטריות שלנו מחכות לכם במדפי הרשתות והחנויות הבאות:</span><br>
+      <span data-i18n="stores.online">או פשוט הזמינו כאן באתר עם משלוח עד הבית.</span></p>
+    </section>
+
+    <div class="store-search">
+      <input type="search" class="js-store-filter" placeholder="חיפוש חנות או עיר..." data-i18n-ph="stores.search" aria-label="search stores">
+    </div>
+
+    <div class="stores-grid">
+      <div class="store-cat reveal">
+        <h2 data-i18n="stores.cat1">רשתות שיווק</h2>
+        <ul class="js-stores" data-cat="cat1"></ul>
+      </div>
+      <div class="store-cat reveal">
+        <h2 data-i18n="stores.cat2">חנויות אסייתיות</h2>
+        <ul class="js-stores" data-cat="cat2"></ul>
+      </div>
+      <div class="store-cat reveal">
+        <h2 data-i18n="stores.cat3">מעדניות ושווקים</h2>
+        <ul class="js-stores" data-cat="cat3"></ul>
+      </div>
+    </div>
+
+    <p style="text-align:center;padding-bottom:4rem"><a class="btn btn--red btn--pop btn--big" href="product.html" data-i18n="hero.cta">לקנות עכשיו</a></p>
+  </main>
+  <script src="js/data.js"></script>
+  <script src="js/partials.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      function render() {
+        document.querySelectorAll('.js-stores').forEach(function (ul) {
+          var cat = ul.dataset.cat;
+          var list = TOA.lang === 'en' ? TOA.stores[cat + 'en'] : TOA.stores[cat];
+          ul.innerHTML = (list || []).map(function (s) { return '<li>' + s + '</li>'; }).join('');
+        });
+      }
+      render();
+      document.addEventListener('toa:lang', render);
+      var input = document.querySelector('.js-store-filter');
+      if (input) input.addEventListener('input', function () {
+        var q = input.value.trim().toLowerCase();
+        document.querySelectorAll('.js-stores li').forEach(function (li) {
+          li.style.display = li.textContent.toLowerCase().indexOf(q) === -1 ? 'none' : '';
+        });
+      });
+    });
+  </script>
+</body>
+</html>

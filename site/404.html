@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>404 | Taste of Asia</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23CE2127'/%3E%3Cpath d='M6 17h20a10 10 0 0 1-20 0z' fill='%23FBF2E0'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main id="main">
+    <section class="page-hero" style="min-height:60vh">
+      <p class="giant display" style="font-size:clamp(5rem,20vw,14rem);color:var(--red)">404</p>
+      <h1 class="reveal" data-i18n="nf.title">אופס, הצלחת הזאת ריקה</h1>
+      <p style="margin-top:2rem"><a class="btn btn--red btn--pop btn--big" href="index.html" data-i18n="nf.cta">חזרה לדף הבית</a></p>
+    </section>
+  </main>
+  <script src="js/data.js"></script>
+  <script src="js/partials.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    // playful cycling background, like the original 404
+    (function () {
+      var colors = ['#FBF2E0', '#F2B33D', '#F3DCC8'];
+      var i = 0;
+      setInterval(function () {
+        document.body.style.background = colors[i = (i + 1) % colors.length];
+      }, 1400);
+    })();
+  </script>
+</body>
+</html>

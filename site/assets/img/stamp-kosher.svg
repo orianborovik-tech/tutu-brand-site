@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="כשר פרווה KF">
+  <defs>
+    <path id="stampTop" d="M80 22 a58 58 0 0 1 0 116" fill="none"/>
+    <path id="stampBottom" d="M80 138 a58 58 0 0 1 0 -116" fill="none"/>
+  </defs>
+  <circle cx="80" cy="80" r="76" fill="#FBF2E0" stroke="#CE2127" stroke-width="5"/>
+  <circle cx="80" cy="80" r="60" fill="none" stroke="#CE2127" stroke-width="2.5" stroke-dasharray="4 6"/>
+  <text font-family="Heebo, sans-serif" font-weight="800" font-size="15" fill="#CE2127" letter-spacing="2">
+    <textPath href="#stampTop" startOffset="50%" text-anchor="middle">כשר פרווה</textPath>
+  </text>
+  <text font-family="Heebo, sans-serif" font-weight="800" font-size="15" fill="#CE2127" letter-spacing="3">
+    <textPath href="#stampBottom" startOffset="50%" text-anchor="middle">בהשגחת הרבנות</textPath>
+  </text>
+  <path d="M80 48 L104 62 L104 98 L80 112 L56 98 L56 62 Z" fill="#CE2127"/>
+  <text x="80" y="90" text-anchor="middle" font-family="Heebo, sans-serif" font-weight="800" font-size="26" fill="#FBF2E0">KF</text>
+</svg>

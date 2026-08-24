@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 520" role="img" aria-label="Udon pack illustration">
+  <!-- Original placeholder illustration of the udon pouch — replaced later by the real pack photo -->
+  <defs>
+    <linearGradient id="bagShine" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset=".4" stop-color="#ffffff" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity=".3"/>
+    </linearGradient>
+  </defs>
+
+  <!-- pouch body -->
+  <path d="M52 40 Q48 22 66 20 L354 20 Q372 22 368 40 L382 470 Q384 496 356 498 L64 498 Q36 496 38 470 Z"
+        fill="#F4E7CC" stroke="#171210" stroke-width="5"/>
+  <!-- crimped top -->
+  <path d="M52 40 L368 40 L364 74 L56 74 Z" fill="#EADbB6" stroke="#171210" stroke-width="4"/>
+  <path d="M60 52h300M60 62h300" stroke="#171210" stroke-width="2" opacity=".35"/>
+
+  <!-- noodles inside -->
+  <g stroke="#EFE3C0" stroke-width="16" fill="none" stroke-linecap="round">
+    <path d="M70 210 q40 -40 80 0 t80 0 t80 0 t60 -10"/>
+    <path d="M66 260 q44 36 88 4 t84 6 t86 -8 t44 8"/>
+    <path d="M72 320 q36 -34 80 -6 t86 10 t82 -12 t46 4"/>
+    <path d="M70 380 q40 30 84 2 t88 6 t80 -10 t44 6"/>
+    <path d="M76 434 q36 -28 78 -4 t84 8 t80 -10 t40 4"/>
+  </g>
+  <g stroke="#E2D3A8" stroke-width="4" fill="none" opacity=".8">
+    <path d="M70 216 q40 -40 80 0 t80 0 t80 0 t60 -10"/>
+    <path d="M66 266 q44 36 88 4 t84 6 t86 -8 t44 8"/>
+    <path d="M72 326 q36 -34 80 -6 t86 10 t82 -12 t46 4"/>
+    <path d="M70 386 q40 30 84 2 t88 6 t80 -10 t44 6"/>
+  </g>
+
+  <!-- red label band -->
+  <path d="M56 78 L364 78 L372 200 Q290 232 210 232 Q130 232 48 200 Z" fill="#CE2127" stroke="#171210" stroke-width="5"/>
+
+  <!-- bowl logo on the label -->
+  <g transform="translate(210 128)">
+    <path d="M-46 8 h92 a46 46 0 0 1 -92 0 z" fill="#FBF2E0"/>
+    <path d="M-18 0 c0 -12 8 -12 8 -24 m18 24 c0 -12 8 -12 8 -24" stroke="#FBF2E0" stroke-width="7" fill="none" stroke-linecap="round"/>
+  </g>
+  <text x="210" y="108" text-anchor="middle" font-family="Secular One, Heebo, sans-serif" font-size="30" fill="#FBF2E0">Taste of Asia</text>
+
+  <!-- hebrew product strip -->
+  <rect x="86" y="336" width="248" height="66" rx="14" fill="#CE2127" stroke="#171210" stroke-width="4"/>
+  <text x="210" y="364" text-anchor="middle" font-family="Secular One, Heebo, sans-serif" font-size="24" fill="#FBF2E0">אטריות מוכנות</text>
+  <text x="210" y="390" text-anchor="middle" font-family="Heebo, sans-serif" font-size="13" fill="#FBF2E0">מתאים להקפצה, מרקים ומנות קרות</text>
+
+  <!-- kosher + weight -->
+  <g transform="translate(330 288)">
+    <path d="M0 -22 L19 -11 L19 11 L0 22 L-19 11 L-19 -11 Z" fill="#CE2127" stroke="#171210" stroke-width="3"/>
+    <text x="0" y="7" text-anchor="middle" font-family="Heebo, sans-serif" font-weight="800" font-size="17" fill="#FBF2E0">KF</text>
+  </g>
+  <text x="210" y="452" text-anchor="middle" font-family="Heebo, sans-serif" font-weight="700" font-size="15" fill="#171210">משקל נקי 200 גרם</text>
+
+  <!-- shine -->
+  <path d="M52 40 Q48 22 66 20 L354 20 Q372 22 368 40 L382 470 Q384 496 356 498 L64 498 Q36 496 38 470 Z"
+        fill="url(#bagShine)" opacity=".5"/>
+</svg>
