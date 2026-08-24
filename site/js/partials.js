@@ -13,7 +13,7 @@
       '<rect x="2" y="2" width="52" height="52" rx="14" fill="#CE2127" stroke="#171210" stroke-width="3"/>' +
       '<path d="M12 30h32a16 16 0 0 1-32 0z" fill="#FBF2E0"/>' +
       '<path d="M20 24c0-4 3-4 3-8m7 8c0-4 3-4 3-8" stroke="#FBF2E0" stroke-width="3" fill="none" stroke-linecap="round"/>' +
-      '<text x="66" y="38" font-family="Secular One, Heebo, sans-serif" font-size="25" fill="currentColor" textLength="176" lengthAdjust="spacingAndGlyphs">Taste of Asia</text>' +
+      '<text x="66" y="38" font-family="Secular One, Heebo, sans-serif" font-size="25" fill="currentColor" textLength="176" lengthAdjust="spacingAndGlyphs" style="direction:ltr" text-anchor="start">Taste of Asia</text>' +
       '</svg>',
     cart:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l1.5 12.5a1.5 1.5 0 0 1-1.5 1.5H6a1.5 1.5 0 0 1-1.5-1.5L6 7z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/></svg>',

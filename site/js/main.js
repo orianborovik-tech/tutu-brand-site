@@ -340,7 +340,7 @@
         const svg = tp.closest('svg');
         const r = svg.getBoundingClientRect();
         const p = Math.min(1, Math.max(0, 1 - (r.top + r.height) / (vh + r.height)));
-        tp.setAttribute('startOffset', (-p * 40) + '%');
+        tp.setAttribute('startOffset', (50 - p * 24) + '%');
       });
     }
     window.addEventListener('scroll', () => {
