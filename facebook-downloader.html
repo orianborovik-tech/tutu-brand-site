@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Video Downloader</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .status.loading {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-left: 4px solid #1976d2;
+        }
+
+        .status.success {
+            background: #e8f5e9;
+            color: #388e3c;
+            border-left: 4px solid #388e3c;
+        }
+
+        .status.error {
+            background: #ffebee;
+            color: #d32f2f;
+            border-left: 4px solid #d32f2f;
+        }
+
+        .progress-bar {
+            display: none;
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar.show {
+            display: block;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .video-info {
+            display: none;
+            margin-top: 20px;
+            padding: 16px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .video-info.show {
+            display: block;
+        }
+
+        .video-info img {
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            max-height: 300px;
+            object-fit: cover;
+        }
+
+        .video-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .download-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .download-btn {
+            padding: 10px;
+            font-size: 13px;
+            text-align: center;
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            cursor: pointer;
+        }
+
+        .download-btn:hover {
+            background: #f0f4ff;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .info-box {
+            background: #fffacd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 Facebook Video Downloader</h1>
+            <p class="subtitle">Download videos directly from Facebook</p>
+        </header>
+
+        <div class="info-box">
+            💡 Paste a Facebook video link and download it in your preferred quality
+        </div>
+
+        <div class="input-group">
+            <input
+                type="text"
+                id="urlInput"
+                placeholder="Paste Facebook video URL here..."
+                autocomplete="off"
+            >
+            <button id="fetchBtn" onclick="fetchVideo()">Fetch</button>
+        </div>
+
+        <div id="status" class="status"></div>
+        <div id="progressBar" class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+
+        <div id="videoInfo" class="video-info">
+            <img id="thumbnail" alt="Video thumbnail">
+            <div class="video-title" id="videoTitle"></div>
+            <div class="download-options" id="downloadOptions"></div>
+        </div>
+    </div>
+
+    <script>
+        const urlInput = document.getElementById('urlInput');
+        const fetchBtn = document.getElementById('fetchBtn');
+        const statusDiv = document.getElementById('status');
+        const videoInfoDiv = document.getElementById('videoInfo');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = progressBar.querySelector('.progress-fill');
+
+        let videoData = null;
+
+        function showStatus(message, type = 'loading') {
+            statusDiv.textContent = message;
+            statusDiv.className = `status show ${type}`;
+            if (type !== 'loading') {
+                progressBar.classList.remove('show');
+            }
+        }
+
+        function hideStatus() {
+            statusDiv.classList.remove('show');
+        }
+
+        function validateUrl(url) {
+            const patterns = [
+                /facebook\.com/i,
+                /fb\.watch/i,
+                /m\.facebook\.com/i
+            ];
+            return patterns.some(p => p.test(url));
+        }
+
+        async function fetchVideo() {
+            const url = urlInput.value.trim();
+
+            if (!url) {
+                showStatus('Please enter a Facebook video URL', 'error');
+                return;
+            }
+
+            if (!validateUrl(url)) {
+                showStatus('Please enter a valid Facebook video URL', 'error');
+                return;
+            }
+
+            fetchBtn.disabled = true;
+            showStatus('🔄 Fetching video information...', 'loading');
+            progressBar.classList.add('show');
+            videoInfoDiv.classList.remove('show');
+
+            try {
+                // Simulate API call - in production this would hit your backend
+                const response = await simulateVideoFetch(url);
+
+                if (response.success) {
+                    displayVideoInfo(response.video);
+                    showStatus('✅ Video ready for download', 'success');
+                } else {
+                    showStatus(response.error || 'Failed to fetch video', 'error');
+                }
+            } catch (error) {
+                showStatus('Error: ' + error.message, 'error');
+            } finally {
+                fetchBtn.disabled = false;
+                progressBar.classList.remove('show');
+            }
+        }
+
+        async function simulateVideoFetch(url) {
+            try {
+                const response = await fetch('/api/fetch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    return { success: false, error: data.error || 'Failed to fetch video' };
+                }
+
+                return {
+                    success: true,
+                    video: {
+                        title: data.video.title,
+                        thumbnail: data.video.thumbnail || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect fill="%23667eea" width="400" height="300"/><circle cx="200" cy="150" r="50" fill="white" opacity="0.3"/><text x="200" y="160" text-anchor="middle" fill="white" font-size="16">Video Thumbnail</text></svg>',
+                        qualities: data.video.formats.map((f, i) => ({
+                            id: f.id,
+                            label: f.quality,
+                            size: f.size
+                        }))
+                    }
+                };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        function displayVideoInfo(video) {
+            document.getElementById('videoTitle').textContent = video.title;
+            document.getElementById('thumbnail').src = video.thumbnail;
+
+            const downloadOptions = document.getElementById('downloadOptions');
+            downloadOptions.innerHTML = '';
+
+            video.qualities.forEach(quality => {
+                const btn = document.createElement('button');
+                btn.className = 'download-btn';
+                btn.innerHTML = `📥 ${quality.label}<br><small>${quality.size}</small>`;
+                btn.onclick = () => downloadVideo(quality);
+                downloadOptions.appendChild(btn);
+            });
+
+            videoInfoDiv.classList.add('show');
+        }
+
+        async function downloadVideo(quality) {
+            const url = urlInput.value.trim();
+            showStatus(`📥 Processing ${quality.label}...`, 'loading');
+            progressBar.classList.add('show');
+
+            try {
+                const response = await fetch('/api/download', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url: url,
+                        formatId: quality.id
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showStatus(`❌ ${data.error || 'Download failed'}`, 'error');
+                    return;
+                }
+
+                // Simulate progress
+                for (let i = 0; i <= 100; i += 10) {
+                    progressFill.style.width = i + '%';
+                    await new Promise(r => setTimeout(r, 200));
+                }
+
+                showStatus(`✅ Download completed for ${quality.label}`, 'success');
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                progressBar.classList.remove('show');
+            }
+        }
+
+        urlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                fetchVideo();
+            }
+        });
+    </script>
+</body>
+</html>
