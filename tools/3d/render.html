@@ -1,0 +1,28 @@
+<!doctype html><html><body style="margin:0;background:#dcdcdc">
+<canvas id="c" width="1200" height="1200"></canvas>
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+const q=new URLSearchParams(location.search);
+const file=q.get('file')||'panda.glb'; const yaw=parseFloat(q.get('yaw')||'0'); const zoom=parseFloat(q.get('zoom')||'1'); const ty=q.has('ty')?parseFloat(q.get('ty')):null;
+const canvas=document.getElementById('c');
+const r=new THREE.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true});
+r.setPixelRatio(1); r.outputColorSpace=THREE.SRGBColorSpace; r.toneMapping=THREE.ACESFilmicToneMapping; r.toneMappingExposure=1.0;
+r.shadowMap.enabled=true; r.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0xdcdcdc);
+const pmrem=new THREE.PMREMGenerator(r); scene.environment=pmrem.fromScene(new RoomEnvironment(),0.04).texture;
+const cam=new THREE.PerspectiveCamera(30,1,0.01,100);
+const key=new THREE.DirectionalLight(0xfff2e6,2.2); key.position.set(2,4,3); key.castShadow=true; key.shadow.mapSize.set(2048,2048); key.shadow.bias=-0.0005; key.shadow.radius=4; scene.add(key);
+const fill=new THREE.DirectionalLight(0xdfe8ff,0.6); fill.position.set(-3,2,-2); scene.add(fill);
+const g=new THREE.Mesh(new THREE.CircleGeometry(10,64),new THREE.ShadowMaterial({opacity:0.35})); g.rotation.x=-Math.PI/2; g.receiveShadow=true; scene.add(g);
+new GLTFLoader().load('/'+file,(gltf)=>{
+  const m=gltf.scene; m.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+  const box=new THREE.Box3().setFromObject(m); const size=box.getSize(new THREE.Vector3()); const c=box.getCenter(new THREE.Vector3());
+  m.position.sub(c); m.position.y+=size.y/2; g.position.y=0; scene.add(m);
+  const d=Math.max(size.x,size.y,size.z)*2.1/zoom;
+  const ly=ty===null?size.y/2:size.y*ty; cam.position.set(Math.sin(yaw)*d,ty===null?size.y*0.65:ly+size.y*0.15,Math.cos(yaw)*d); cam.lookAt(0,ly,0);
+  r.render(scene,cam); window.done=true;
+},undefined,e=>{console.error(e);window.err=String(e);});
+</script></body></html>
