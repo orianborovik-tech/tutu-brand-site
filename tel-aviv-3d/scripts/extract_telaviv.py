@@ -254,6 +254,71 @@ def stage_extract(pbf, workdir):
         hits = [n for n in named if probe in n][:4]
         print(f"  probe '{probe}': {hits}")
 
+
+def merge_municipal(D, workdir):
+    """Fill unknown building heights/names from the Tel Aviv municipality GIS
+    (measured photogrammetric heights, floor counts, construction year)."""
+    import math as _m
+    path = None
+    for cand in (os.path.join(workdir, 'muni_bldg.json'),
+                 os.path.join(os.path.dirname(os.path.abspath(workdir)), 'muni_bldg.json')):
+        if os.path.exists(cand): path = cand; break
+    if not path:
+        print('municipal data: not found, skipping'); return
+    rows = json.load(open(path))
+    # grid index over OSM footprints (dm coords)
+    CELL = 300  # 30 m
+    grid = {}
+    for bi, b in enumerate(D['buildings']):
+        r = b['rings'][0][0]
+        xs = r[0::2]; zs = r[1::2]
+        x0, x1, z0, z1 = min(xs), max(xs), min(zs), max(zs)
+        b['_bb'] = (x0, z0, x1, z1)
+        for gx in range(x0 // CELL, x1 // CELL + 1):
+            for gz in range(z0 // CELL, z1 // CELL + 1):
+                grid.setdefault((gx, gz), []).append(bi)
+    def pip(ring, x, z):
+        n = len(ring) // 2
+        inside = False
+        j = n - 1
+        for i in range(n):
+            xi, zi = ring[2*i], ring[2*i+1]
+            xj, zj = ring[2*j], ring[2*j+1]
+            if (zi > z) != (zj > z) and x < (xj - xi) * (z - zi) / (zj - zi) + xi:
+                inside = not inside
+            j = i
+        return inside
+    filled_h = filled_fl = filled_nm = tinted = matched = 0
+    for row in rows:
+        x, z = to_dm(row['lon'], row['lat'])
+        hit = None
+        for bi in grid.get((x // CELL, z // CELL), []):
+            b = D['buildings'][bi]
+            bb = b['_bb']
+            if bb[0] <= x <= bb[2] and bb[1] <= z <= bb[3] and pip(b['rings'][0][0], x, z):
+                hit = b; break
+        if hit is None: continue
+        matched += 1
+        if hit['h'] == 0:
+            h = row.get('h')
+            if not (h and 2 < h < 360):
+                mx, mn = row.get('maxh'), row.get('minh')
+                h = (mx - mn) if (mx and mn and 2 < mx - mn < 360) else None
+            if not h:
+                fl = row.get('fl')
+                if fl and 0 < fl < 90: h = fl * 3.1 + 1.2; filled_fl += 1
+            if h:
+                hit['h'] = int(max(25, min(6500, h * 10)))
+                filled_h += 1
+        if not hit.get('nm') and row.get('nm'):
+            hit['nm'] = row['nm'][:64]; filled_nm += 1
+        yr = row.get('yr')
+        if yr and 1870 < yr <= 1947 and not hit.get('col') and hit.get('ty') == 0:
+            hit['col'] = '#e6d9bd'; tinted += 1
+    for b in D['buildings']: b.pop('_bb', None)
+    print(f'municipal merge: matched {matched:,}/{len(rows):,} | heights filled {filled_h:,} '
+          f'(of them by floors {filled_fl:,}) | names added {filled_nm:,} | pre-1948 tint {tinted:,}')
+
 # --------------------------------------------------------------------- pack --
 def w_u8(b, v): b.append(v & 0xFF)
 def w_u16(b, v): b += struct.pack('<H', v & 0xFFFF)
@@ -418,6 +483,8 @@ def stage_pack(workdir, outdir):
     t0 = time.time()
     with gzip.open(os.path.join(workdir, 'raw.pkl.gz'), 'rb') as f:
         D = pickle.load(f)
+
+    merge_municipal(D, workdir)
 
     names, name_idx = [], {}
     def nm_id(nm):
