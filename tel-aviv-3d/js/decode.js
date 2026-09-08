@@ -60,7 +60,7 @@ function parse(buf) {
   const meta = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, r.o, metaLen)));
   r.o += metaLen;
 
-  const D = { meta, buildings: [], roads: [], areas: [], trees: null, lamps: null, signals: null, busstops: null, benches: null, lifeguards: null, sea: null };
+  const D = { meta, buildings: [], roads: [], areas: [], trees: null, lamps: null, signals: null, busstops: null, benches: null, lifeguards: null, barriers: null, sea: null };
 
   while (r.o < buf.byteLength) {
     const sid = r.u8();
@@ -111,6 +111,11 @@ function parse(buf) {
     else if (sid === 8) D.busstops = readPoints(r);
     else if (sid === 9) D.benches = readPoints(r);
     else if (sid === 10) D.lifeguards = readPoints(r);
+    else if (sid === 11) {
+      const count = r.u32();
+      D.barriers = [];
+      for (let i = 0; i < count; i++) D.barriers.push({ ty: r.u8(), pts: readRing(r) });
+    }
     else if (sid === 7) { const c = r.u32(); if (c > 0) D.sea = readRing(r); }
     r.o = end;
   }

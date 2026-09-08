@@ -79,8 +79,8 @@ export function makeVegetation(data, refs, env, scene, cap = 95000) {
       b[0] = Math.min(b[0], o[i]); b[1] = Math.min(b[1], o[i + 1]);
       b[2] = Math.max(b[2], o[i]); b[3] = Math.max(b[3], o[i + 1]);
     }
-    const step = park.dense ? 11 : 15;
-    const keep = park.dense ? 0.8 : 0.5;
+    const step = (park.dense ? 11 : 15) * (refs.ultra ? 0.65 : 1);
+    const keep = (park.dense ? 0.8 : 0.5) + (refs.ultra ? 0.12 : 0);
     for (let x = b[0]; x < b[2]; x += step) {
       for (let z = b[1]; z < b[3]; z += step) {
         if (rng() > keep) continue;
@@ -96,7 +96,7 @@ export function makeVegetation(data, refs, env, scene, cap = 95000) {
   for (const rd of refs.roadsForGreen) {
     if (trees.length > cap) break;
     const wayKeep = mulberry32(rd.i * 31 + 5)();
-    const p = rd.cls === 6 ? 0.42 : rd.cls === 3 ? 0.4 : 0.3;
+    const p = (rd.cls === 6 ? 0.42 : rd.cls === 3 ? 0.4 : 0.3) * (refs.ultra ? 1.8 : 1);
     if (wayKeep > p) continue;
     const pts = rd.pts;
     const off = rd.w / 2 + 2.8;
@@ -184,7 +184,7 @@ export function makeStreetFurniture(data, refs, env, scene) {
   const lamps = [];
   const L = data.lamps;
   for (let i = 0; i < L.length; i += 2) lamps.push({ x: L[i], z: L[i + 1] });
-  const SPACING = [42, 44, 52, 62, 76];
+  const SPACING = refs.ultra ? [30, 30, 34, 40, 46] : [42, 44, 52, 62, 76];
   for (const p of refs.carPaths) {
     if (lamps.length > 30000) break;
     if (p.cls > 4) continue;

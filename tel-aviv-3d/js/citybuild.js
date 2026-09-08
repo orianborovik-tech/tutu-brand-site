@@ -99,6 +99,8 @@ export async function buildCity(data, scene, env, onProgress) {
     balconySpots: [], antennaSpots: [], roadGrid: new Map(),
     coastLine: null, stats: {},
   };
+  const ultra = data.meta.mode === 'ultra';
+  refs.ultra = ultra;
   const TILE = 1500;
   const tiles = new Map();
   const tileFor = (x, z) => {
@@ -110,7 +112,7 @@ export async function buildCity(data, scene, env, onProgress) {
 
   // ------------------------------------------------------------ buildings --
   const B = data.buildings;
-  let dudCap = 60000, acCap = 30000, balCap = 90000, antCap = 9000;
+  let dudCap = 60000, acCap = 30000, balCap = ultra ? 400000 : 90000, antCap = ultra ? 40000 : 9000;
   for (let start = 0; start < B.length; start += 2200) {
     const endI = Math.min(B.length, start + 2200);
     for (let i = start; i < endI; i++) {
@@ -143,7 +145,7 @@ export async function buildCity(data, scene, env, onProgress) {
       for (let k = 0; k < o0.length; k += 2) { cx += o0[k]; cz += o0[k + 1]; }
       cx /= o0.length / 2; cz /= o0.length / 2;
       const metaIdx = refs.buildingMeta.length;
-      refs.buildingMeta.push({ nm: b.nm !== 0xFFFF ? data.meta.names[b.nm] : null, h, ty: b.ty, cx, cz, part: b.part });
+      refs.buildingMeta.push({ nm: b.nm !== 0xFFFF ? data.meta.names[b.nm] : null, h, ty: b.ty, cx, cz, part: b.part, a: area });
       const acc = tileFor(cx, cz);
 
       // roof style: OSM roof:shape → apex fan; flat roofs get a parapet rim
@@ -185,10 +187,10 @@ export async function buildCity(data, scene, env, onProgress) {
               const midx = (x0 + x1) / 2, midz = (z0 + z1) / 2;
               if (nx * (midx - cx) + nz * (midz - cz) < 0) { nx = -nx; nz = -nz; }
               const ry = Math.atan2(-nz, nx);
-              const slots = Math.min(4, Math.floor(len / 7.6));
+              const slots = Math.min(ultra ? 6 : 4, Math.floor(len / (ultra ? 6.2 : 7.6)));
               const floors = Math.min(7, Math.floor((h - 3.2) / 3.0));
               for (let s2 = 0; s2 < slots; s2++) {
-                if (rng() > 0.62) continue;
+                if (rng() > (ultra ? 0.8 : 0.62)) continue;
                 const t = ((s2 + 0.5) / slots) * len;
                 const bx = x0 + (x1 - x0) * (t / len), bz = z0 + (z1 - z0) * (t / len);
                 for (let f = 1; f <= floors && balCap > 0; f++) {
@@ -313,6 +315,35 @@ export async function buildCity(data, scene, env, onProgress) {
   scene.add(walkMesh);
   refs.stats.roadKm = Math.round(roadLen / 1000);
 
+  // plot fences / hedges / walls (ultra neighborhoods)
+  if (data.barriers && data.barriers.length) {
+    const barAcc = new Acc(false);
+    const BAR = [
+      { h: 1.35, w: 0.05, col: hex('#6b6f66') },   // fence
+      { h: 1.55, w: 0.55, col: hex('#4f7a3d') },   // hedge
+      { h: 1.9, w: 0.22, col: hex('#c9c0ae') },    // wall
+    ];
+    let fenceLen = 0;
+    for (const b of data.barriers) {
+      const st = BAR[b.ty] || BAR[0];
+      const n = b.pts.length / 2;
+      let pa = -1, pb = -1;
+      for (let i = 0; i < n; i++) {
+        const x = b.pts[i * 2], z = b.pts[i * 2 + 1];
+        if (i > 0) fenceLen += Math.hypot(x - b.pts[(i-1)*2], z - b.pts[(i-1)*2+1]);
+        const a = barAcc.vert(x, 0.1, z, st.col);
+        const c2 = barAcc.vert(x, st.h, z, st.col);
+        if (pa >= 0) barAcc.idx.push(pa, pb, c2, pa, c2, a);
+        pa = a; pb = c2;
+      }
+      if (st.w > 0.1) ribbon(barAcc, b.pts, st.w, st.h, st.col);
+    }
+    const barMesh = new THREE.Mesh(barAcc.geometry(), fMat);
+    barMesh.matrixAutoUpdate = false;
+    scene.add(barMesh);
+    refs.stats.fenceKm = Math.round(fenceLen / 100) / 10;
+  }
+
   // ---------------------------------------------------------------- areas --
   const areaAcc = new Acc(false);
   const A = data.areas;
@@ -343,7 +374,8 @@ export async function buildCity(data, scene, env, onProgress) {
   // ------------------------------------------------------- ground and sea --
   const gAcc = new Acc(false);
   const gb = data.meta.bbox.map((v) => v * 0.1);
-  const GX0 = gb[0] - 2500, GZ0 = gb[1] - 2500, GX1 = gb[2] + 2500, GZ1 = gb[3] + 2500;
+  const GM = ultra ? 450 : 2500;
+  const GX0 = gb[0] - GM, GZ0 = gb[1] - GM, GX1 = gb[2] + GM, GZ1 = gb[3] + GM;
   const gcol = hex('#b3aa9c');
   {
     const a = gAcc.vert(GX0, -1.2, GZ0, gcol), b2 = gAcc.vert(GX1, -1.2, GZ0, gcol);

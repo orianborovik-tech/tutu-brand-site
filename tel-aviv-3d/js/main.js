@@ -57,14 +57,25 @@ async function main() {
   prog(0.93, 'משחרר תנועה לאיילון…');
   await new Promise(requestAnimationFrame);
   const traffic = makeTraffic(refs, env, scene);
-  const boats = makeBoats(env, scene, lonlatToLocal, data.meta, data.sea);
-  const labels = makeLabels(scene);
+  const boats = data.sea ? makeBoats(env, scene, lonlatToLocal, data.meta, data.sea) : { group: new THREE.Group(), count: 0 };
+  // labels created after controls (ultra needs buildingMeta)
 
   const bb = data.meta.bbox.map((v) => v * 0.1);
   const controls = new CityControls(camera, canvas, { x0: bb[0], z0: bb[1], x1: bb[2], z1: bb[3] });
+  const ultra = data.meta.mode === 'ultra';
+  // neighborhood mode: landmarks are the largest named buildings in the clip
+  let lmList = null;
+  if (ultra) {
+    lmList = refs.buildingMeta
+      .filter((m) => m.nm && !m.part)
+      .sort((a, b2) => (b2.a || 0) - (a.a || 0))
+      .slice(0, 9)
+      .map((m, i) => ({ nm: m.nm, x: m.cx, z: m.cz, dist: 300, pitch: 0.55, yaw: (i * 1.3) % 6.28 - 3.14, h: m.h + 14 }));
+  }
 
   let hour = 18.2;
   let envDirty = true;
+  const labels = makeLabels(scene, lmList);
   const hud = buildHud(document.body, {
     setHour(h) { hour = h; envDirty = true; },
     flyTo(l) { controls.flyTo({ x: l.x, z: l.z, dist: l.dist, pitch: l.pitch, yaw: l.yaw }, 2.6); },
@@ -72,7 +83,7 @@ async function main() {
       if (btn.dataset.on) { controls.userMoved = true; return; }
       btn.dataset.on = '1';
       btn.textContent = '⏸ עצור';
-      runTour(controls, () => { delete btn.dataset.on; btn.textContent = '▶ סיור'; });
+      runTour(controls, () => { delete btn.dataset.on; btn.textContent = '▶ סיור'; }, lmList);
     },
     toggle(key, on) {
       if (key === 'trees') veg.group.visible = on;
@@ -80,7 +91,9 @@ async function main() {
       else if (key === 'labels') labels.visible = on;
       else if (key === 'furniture') { furn.group.visible = on; boats.group.visible = on; life.group.visible = on; }
     },
-  });
+  }, { title: data.meta.title || undefined,
+       sub: ultra ? 'שכונה במיקרו־פירוט, נתוני OSM + עיריית ת"א' : undefined,
+       landmarks: lmList || undefined });
   hud.setStats({
     buildings: refs.buildingMeta.length,
     trees: veg.treeCount,
@@ -99,13 +112,17 @@ async function main() {
   $('#loader').classList.add('done');
   setTimeout(() => $('#loader').remove(), 900);
 
-  // intro flight: high above the sea → city overview
-  controls.target.set(0, 0, 500);
+  // intro flight
+  const cx0 = (bb[0] + bb[2]) / 2, cz0 = (bb[1] + bb[3]) / 2;
+  const span = Math.max(bb[2] - bb[0], bb[3] - bb[1]);
+  controls.target.set(cx0, 0, cz0 + (ultra ? 100 : 500 - cz0));
+  if (!ultra) controls.target.set(0, 0, 500);
   controls.yaw = 0.001;
   controls.pitch = 1.5;
-  controls.dist = 26000;
+  controls.dist = ultra ? span * 4 : 26000;
   controls.apply();
-  controls.flyTo({ x: -700, z: 900, yaw: 0.42, pitch: 0.86, dist: 5200 }, 4.5);
+  if (ultra) controls.flyTo({ x: cx0, z: cz0, yaw: 0.5, pitch: 0.78, dist: span * 0.95 }, 4.0);
+  else controls.flyTo({ x: -700, z: 900, yaw: 0.42, pitch: 0.86, dist: 5200 }, 4.5);
 
   // test/debug hook: jump the camera to a pose
   window.__setView = (v) => {

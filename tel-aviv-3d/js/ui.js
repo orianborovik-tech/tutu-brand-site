@@ -28,9 +28,9 @@ export function localizeLandmarks(meta) {
   }
 }
 
-export function makeLabels(scene) {
+export function makeLabels(scene, list) {
   const group = new THREE.Group();
-  for (const l of LANDMARKS) {
+  for (const l of (list || LANDMARKS)) {
     const cnv = document.createElement('canvas');
     const ctx = cnv.getContext('2d');
     ctx.font = '600 44px system-ui, "Segoe UI", Arial';
@@ -127,12 +127,11 @@ export function attachPicking(dom, camera, tileMeshes, buildingMeta, popup) {
 
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-export async function runTour(controls, onDone) {
-  const seq = ['שעון יפו', 'נווה צדק', 'מגדל שלום מאיר', 'שדרות רוטשילד', 'הבימה',
+export async function runTour(controls, onDone, list) {
+  const seq = list || ['שעון יפו', 'נווה צדק', 'מגדל שלום מאיר', 'שדרות רוטשילד', 'הבימה',
     'מגדל עזריאלי שרונה', 'מרכז עזריאלי', 'כיכר רבין', 'כיכר דיזנגוף',
-    'מרינה תל אביב', 'נמל תל אביב', 'פארק הירקון'];
-  for (const nm of seq) {
-    const l = LANDMARKS.find((x) => x.nm === nm);
+    'מרינה תל אביב', 'נמל תל אביב', 'פארק הירקון'].map((nm) => LANDMARKS.find((x) => x.nm === nm)).filter(Boolean);
+  for (const l of seq) {
     if (!l) continue;
     const ok = await controls.flyTo({ x: l.x, z: l.z, dist: l.dist, pitch: l.pitch, yaw: l.yaw }, 3.0);
     if (!ok) { onDone(false); return; }
@@ -147,13 +146,13 @@ export async function runTour(controls, onDone) {
   onDone(true);
 }
 
-export function buildHud(root, cb) {
+export function buildHud(root, cb, opts = {}) {
   root.insertAdjacentHTML('beforeend', `
   <div id="hud">
     <div id="hud-head">
       <div>
-        <div id="hud-title">תל אביב <span>3D</span></div>
-        <div id="hud-sub">כל העיר, מנתוני OSM אמיתיים</div>
+        <div id="hud-title">${opts.title || "תל אביב"} <span>3D</span></div>
+        <div id="hud-sub">${opts.sub || "כל העיר, מנתוני OSM אמיתיים"}</div>
       </div>
       <button id="hud-min" title="מזעור">–</button>
     </div>
@@ -183,13 +182,13 @@ export function buildHud(root, cb) {
 
   const $ = (s) => root.querySelector(s);
   const sel = $('#landmarks');
-  for (const l of LANDMARKS) {
+  for (const l of (opts.landmarks || LANDMARKS)) {
     const o = document.createElement('option');
     o.value = l.nm; o.textContent = l.nm;
     sel.appendChild(o);
   }
   sel.addEventListener('change', () => {
-    const l = LANDMARKS.find((x) => x.nm === sel.value);
+    const l = (opts.landmarks || LANDMARKS).find((x) => x.nm === sel.value);
     if (l) cb.flyTo(l);
     sel.value = '';
   });

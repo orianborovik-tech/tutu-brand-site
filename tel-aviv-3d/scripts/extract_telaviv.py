@@ -109,7 +109,7 @@ def stage_extract(pbf, workdir):
     t0 = time.time()
     D = {'buildings': [], 'roads': [], 'areas': [], 'trees': array('i'), 'lamps': array('i'),
          'signals': array('i'), 'busstops': array('i'), 'benches': array('i'),
-         'lifeguards': array('i'), 'coast': [], 'coast_rings': []}
+         'lifeguards': array('i'), 'barriers': [], 'coast': [], 'coast_rings': []}
 
     def ring_dm(ring):
         pts = array('i')
@@ -149,7 +149,7 @@ def stage_extract(pbf, workdir):
           .with_filter(ofilter.EmptyTagFilter())
           .with_filter(ofilter.KeyFilter('building', 'building:part', 'highway', 'natural',
                                          'leisure', 'landuse', 'waterway', 'man_made',
-                                         'railway', 'amenity', 'place', 'tourism', 'emergency', 'lifeguard')))
+                                         'railway', 'amenity', 'place', 'tourism', 'emergency', 'lifeguard', 'barrier')))
     for o in fp:
         n_scanned += 1
         if o.is_node():
@@ -176,6 +176,12 @@ def stage_extract(pbf, workdir):
                         D['coast_rings'].append(pts)
                     else:
                         D['coast'].append(pts)
+                continue
+            bar = t.get('barrier')
+            if bar in ('fence', 'hedge', 'wall', 'retaining_wall') and t.get('area') != 'yes':
+                pts = line_dm(o.nodes)
+                if pts is not None and any_inside(pts):
+                    D['barriers'].append((0 if bar == 'fence' else 1 if bar == 'hedge' else 2, pts))
                 continue
             cls = None
             if hw is not None and t.get('area') != 'yes':
@@ -244,7 +250,7 @@ def stage_extract(pbf, workdir):
     with gzip.open(os.path.join(workdir, 'raw.pkl.gz'), 'wb', compresslevel=4) as f:
         pickle.dump(D, f, protocol=4)
     print(f"scanned {n_scanned:,} tagged objects in {time.time()-t0:.0f}s")
-    for k in ('buildings', 'roads', 'areas', 'coast', 'coast_rings'):
+    for k in ('buildings', 'roads', 'areas', 'barriers', 'coast', 'coast_rings'):
         print(f"  {k}: {len(D[k]):,}")
     for k in ('trees', 'lamps', 'signals'):
         print(f"  {k}: {len(D[k])//2:,}")
@@ -486,6 +492,36 @@ def stage_pack(workdir, outdir):
 
     merge_municipal(D, workdir)
 
+    clip = os.environ.get('CLIP')  # "lon0,lat0,lon1,lat1"
+    mode = os.environ.get('MODE', 'city')
+    title = os.environ.get('TITLE', '')
+    outname = os.environ.get('OUTNAME', 'telaviv-data')
+    clip_dm = None
+    if clip:
+        lo0, la0, lo1, la1 = [float(v) for v in clip.split(',')]
+        xa, zb = to_dm(lo0, la0); xb, za = to_dm(lo1, la1)
+        clip_dm = (min(xa, xb), min(za, zb), max(xa, xb), max(za, zb))
+        M2 = 500  # 50 m margin
+        def bbox_of(pts):
+            xs = pts[0::2]; zs = pts[1::2]
+            return min(xs), min(zs), max(xs), max(zs)
+        def keep_bb(bb, m=M2):
+            return not (bb[2] < clip_dm[0]-m or bb[0] > clip_dm[2]+m or bb[3] < clip_dm[1]-m or bb[1] > clip_dm[3]+m)
+        D['buildings'] = [b for b in D['buildings'] if keep_bb(bbox_of(b['rings'][0][0]))]
+        D['areas'] = [a for a in D['areas'] if keep_bb(bbox_of(a['rings'][0][0]))]
+        D['roads'] = [r for r in D['roads'] if keep_bb(bbox_of(r[3]), 1500)]
+        D['barriers'] = [b for b in D.get('barriers', []) if keep_bb(bbox_of(b[1]))]
+        for k in ('trees', 'lamps', 'signals', 'busstops', 'benches', 'lifeguards'):
+            arr = D.get(k, array('i'))
+            out = array('i')
+            for i in range(0, len(arr), 2):
+                if clip_dm[0]-M2 <= arr[i] <= clip_dm[2]+M2 and clip_dm[1]-M2 <= arr[i+1] <= clip_dm[3]+M2:
+                    out.append(arr[i]); out.append(arr[i+1])
+            D[k] = out
+        D['coast'] = []; D['coast_rings'] = []
+        print(f'clipped to {clip}: buildings {len(D["buildings"])}, roads {len(D["roads"])}, '
+              f'areas {len(D["areas"])}, barriers {len(D["barriers"])}, trees {len(D["trees"])//2}')
+
     names, name_idx = [], {}
     def nm_id(nm):
         if not nm: return 0xFFFF
@@ -617,6 +653,13 @@ def stage_pack(workdir, outdir):
     section(8, pack_points(D.get('busstops', array('i'))))
     section(9, pack_points(D.get('benches', array('i'))))
     section(10, pack_points(D.get('lifeguards', array('i'))))
+    if clip_dm is not None and D.get('barriers'):
+        bar_body = bytearray()
+        bar_body += struct.pack('<I', len(D['barriers']))
+        for bty, pts in D['barriers']:
+            w_u8(bar_body, bty)
+            w_ring(bar_body, subdivide(pts))
+        section(11, bar_body)
 
     # sea polygon
     chains = stitch_coast(D['coast'])
@@ -631,10 +674,11 @@ def stage_pack(workdir, outdir):
         print("WARNING: no sea polygon built")
     section(7, s_body)
 
+    bbox_out = list(clip_dm) if clip_dm is not None else [X_MIN, Z_MIN, X_MAX, Z_MAX]
     meta = {
-        'lon0': LON0, 'lat0': LAT0,
+        'lon0': LON0, 'lat0': LAT0, 'mode': mode, 'title': title,
         'mlon': M_PER_DEG_LON, 'mlat': M_PER_DEG_LAT,
-        'bbox': [X_MIN, Z_MIN, X_MAX, Z_MAX],
+        'bbox': bbox_out,
         'names': names, 'colours': colours,
         'counts': {'buildings': len(D['buildings']), 'roads': len(D['roads']),
                    'areas': a_count, 'trees': len(D['trees']) // 2,
@@ -650,10 +694,10 @@ def stage_pack(workdir, outdir):
     os.makedirs(outdir, exist_ok=True)
     gz = gzip.compress(blob, 9)
     b64 = base64.b64encode(gz).decode('ascii')
-    with open(os.path.join(outdir, 'telaviv-data.js'), 'w') as f:
+    with open(os.path.join(outdir, outname + '.js'), 'w') as f:
         f.write('// Tel Aviv 3D dataset — data © OpenStreetMap contributors (ODbL 1.0)\n')
         f.write('window.TLV_DATA_B64="' + b64 + '";\n')
-    with open(os.path.join(outdir, 'telaviv.bin.gz'), 'wb') as f:
+    with open(os.path.join(outdir, outname + '.bin.gz'), 'wb') as f:
         f.write(gz)
     print(f"raw {len(blob)/1e6:.1f} MB → gz {len(gz)/1e6:.1f} MB → b64 {len(b64)/1e6:.1f} MB "
           f"({time.time()-t0:.0f}s)")

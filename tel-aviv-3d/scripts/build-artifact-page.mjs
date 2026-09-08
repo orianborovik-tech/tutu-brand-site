@@ -6,15 +6,18 @@ import { fileURLToPath } from 'url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const out = process.argv[2] || join(root, 'artifact.html');
+const page = process.argv[3] || 'index.html';
+const dataFile = process.argv[4] || 'telaviv-data.js';
 
-const src = readFileSync(join(root, 'index.html'), 'utf8');
+const src = readFileSync(join(root, page), 'utf8');
 const style = src.match(/<style>([\s\S]*?)<\/style>/)[1];
 const body = src.match(/<body>([\s\S]*?)<\/body>/)[1]
   .replace(/<script src="[^"]*"><\/script>\s*/g, '');
-const data = readFileSync(join(root, 'data', 'telaviv-data.js'), 'utf8');
+const data = readFileSync(join(root, 'data', dataFile), 'utf8');
 const bundle = readFileSync(join(root, 'bundle.js'), 'utf8').replace(/<\/script>/gi, '<\\/script>');
 
-const html = `<title>תל אביב 3D</title>
+const title = page.includes('tzahala') ? 'צהלה 3D' : 'תל אביב 3D';
+const html = `<title>${title}</title>
 <style>${style}</style>
 <script>document.documentElement.dir='rtl';document.documentElement.lang='he';</script>
 ${body}
