@@ -56,10 +56,10 @@ export function makeLabels(scene) {
     c2.fill();
     const tex = new THREE.CanvasTexture(cnv);
     tex.anisotropy = 4;
-    const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
+    const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true, sizeAttenuation: false });
     const spr = new THREE.Sprite(mat);
-    const scale = 3.1;
-    spr.scale.set(w * 0.5 * scale, 42 * scale, 1);
+    const scale = 0.052; // constant on-screen size
+    spr.scale.set((w / 84) * scale, scale, 1);
     spr.position.set(l.x, l.h + 60, l.z);
     spr.renderOrder = 20;
     group.add(spr);
@@ -141,10 +141,10 @@ export function buildHud(root, cb) {
       <div id="stats"></div>
       <div class="row presets">
         <button data-h="13">☀️ יום</button>
-        <button data-h="18.55" class="on">🌇 שקיעה</button>
+        <button data-h="18.2" class="on">🌇 שקיעה</button>
         <button data-h="21.8">🌙 לילה</button>
       </div>
-      <label class="slider-row">🕐 <input id="hour" type="range" min="0" max="24" step="0.05" value="18.55"><span id="hour-v">18:33</span></label>
+      <label class="slider-row">🕐 <input id="hour" type="range" min="0" max="24" step="0.05" value="18.2"><span id="hour-v">18:12</span></label>
       <div class="row chips">
         <label><input type="checkbox" id="tg-trees" checked>עצים</label>
         <label><input type="checkbox" id="tg-traffic" checked>תנועה</label>

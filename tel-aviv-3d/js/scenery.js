@@ -148,8 +148,8 @@ export function makeVegetation(data, refs, env, scene, cap = 95000) {
 
   const group = new THREE.Group();
   // trunks + canopies
-  const trunkGeo = mergeParts([{ geo: new THREE.CylinderGeometry(0.13, 0.2, 2.6, 5), mat4: M(0, 1.3, 0) }]);
-  const canopyGeo = mergeParts([{ geo: new THREE.IcosahedronGeometry(1.65, 1), mat4: M(0, 3.4, 0, 0, 0, 0, 1) }]);
+  const trunkGeo = mergeParts([{ geo: new THREE.CylinderGeometry(0.13, 0.2, 2.6, 5, 1, true), mat4: M(0, 1.3, 0) }]);
+  const canopyGeo = mergeParts([{ geo: new THREE.IcosahedronGeometry(1.65, 0), mat4: M(0, 3.4, 0, 0, 0, 0, 1) }]);
   const trunkItems = trees.map((t) => ({ x: t.x, y: 0.05, z: t.z, ry: 0, s: 0.8 + t.s * 0.3, sy: t.s, c: [0.34, 0.25, 0.18] }));
   const canopyItems = trees.map((t, i) => ({
     x: t.x, y: 0.05 + (t.s - 1) * 2.2, z: t.z, ry: 0, s: t.s, sy: t.s * 1.05,
@@ -172,7 +172,7 @@ export function makeVegetation(data, refs, env, scene, cap = 95000) {
     fronds.push({ geo: g, mat4: M(Math.cos(a) * 1.1, 7.1, Math.sin(a) * 1.1, -a, 0, 0) });
   }
   const palmGeo = mergeParts([
-    { geo: new THREE.CylinderGeometry(0.14, 0.23, 7, 5), mat4: M(0, 3.5, 0) },
+    { geo: new THREE.CylinderGeometry(0.14, 0.23, 7, 5, 1, true), mat4: M(0, 3.5, 0) },
     ...fronds,
   ]);
   const palmItems = palms.map((t, i) => ({ x: t.x, y: 0.05, z: t.z, ry: (i * 2.39) % 6.28, s: t.s, c: PALM_GREEN[i % 3] }));
@@ -213,9 +213,9 @@ export function makeStreetFurniture(data, refs, env, scene) {
   }
   const group = new THREE.Group();
   const lampGeo = mergeParts([
-    { geo: new THREE.CylinderGeometry(0.06, 0.09, 5.4, 5), mat4: M(0, 2.7, 0) },
+    { geo: new THREE.CylinderGeometry(0.06, 0.09, 5.4, 5, 1, true), mat4: M(0, 2.7, 0) },
     { geo: new THREE.BoxGeometry(1.0, 0.07, 0.07), mat4: M(0.45, 5.35, 0) },
-    { geo: new THREE.SphereGeometry(0.19, 6, 5), mat4: M(0.85, 5.3, 0), e: 1 },
+    { geo: new THREE.SphereGeometry(0.19, 5, 3), mat4: M(0.85, 5.3, 0), e: 1 },
   ]);
   const lampItems = lamps.map((l) => ({ x: l.x, y: l.y || 0.15, z: l.z, ry: rng() * 6.28, s: 1, c: [0.22, 0.23, 0.25] }));
   group.add(makeInstanced(lampGeo, lampItems, env));
@@ -234,7 +234,7 @@ export function makeStreetFurniture(data, refs, env, scene) {
   // traffic signals
   const S = data.signals;
   const sigGeo = mergeParts([
-    { geo: new THREE.CylinderGeometry(0.05, 0.07, 3.1, 5), mat4: M(0, 1.55, 0) },
+    { geo: new THREE.CylinderGeometry(0.05, 0.07, 3.1, 4, 1, true), mat4: M(0, 1.55, 0) },
     { geo: new THREE.BoxGeometry(0.26, 0.72, 0.22), mat4: M(0, 3.35, 0), e: 1 },
   ]);
   const sigItems = [];
@@ -245,7 +245,7 @@ export function makeStreetFurniture(data, refs, env, scene) {
 
   // rooftop: solar water heaters
   const dudGeo = mergeParts([
-    { geo: new THREE.CylinderGeometry(0.5, 0.5, 1.7, 7), mat4: M(0, 0.62, 0, 0, 0, Math.PI / 2) },
+    { geo: new THREE.CylinderGeometry(0.5, 0.5, 1.7, 6), mat4: M(0, 0.62, 0, 0, 0, Math.PI / 2) },
     { geo: new THREE.BoxGeometry(1.55, 0.06, 1.15), mat4: M(0, 0.45, 1.05, 0, -0.5, 0) },
   ]);
   const dudItems = [];

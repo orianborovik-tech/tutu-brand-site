@@ -58,7 +58,7 @@ async function main() {
   const bb = data.meta.bbox.map((v) => v * 0.1);
   const controls = new CityControls(camera, canvas, { x0: bb[0], z0: bb[1], x1: bb[2], z1: bb[3] });
 
-  let hour = 18.55;
+  let hour = 18.2;
   let envDirty = true;
   const hud = buildHud(document.body, {
     setHour(h) { hour = h; envDirty = true; },
@@ -112,6 +112,7 @@ async function main() {
     if (v.dist !== undefined) controls.dist = v.dist;
   };
   window.__lm = (nm) => LANDMARKS.find((l) => l.nm.includes(nm));
+  window.__dbg = { scene, refs, data, env, renderer };
 
   // render loop with adaptive resolution
   let last = performance.now();

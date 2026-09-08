@@ -7,13 +7,13 @@ import * as THREE from 'three';
 // custom shaders coexist with logarithmicDepthBuffer (needed: the city spans
 // 30 km with 10 cm layer separations).
 function logify(vs, fs) {
-  vs = '#include <logdepthbuf_pars_vertex>\n' + vs.replace(/}\s*$/, '\n#include <logdepthbuf_vertex>\n}');
-  fs = '#include <logdepthbuf_pars_fragment>\n' + fs.replace('void main() {', 'void main() {\n#include <logdepthbuf_fragment>');
+  vs = '#include <common>\n#include <logdepthbuf_pars_vertex>\n' + vs.replace(/}\s*$/, '\n#include <logdepthbuf_vertex>\n}');
+  fs = '#include <common>\n#include <logdepthbuf_pars_fragment>\n' + fs.replace('void main() {', 'void main() {\n#include <logdepthbuf_fragment>');
   return [vs, fs];
 }
 export function SM(opts) {
   const [vertexShader, fragmentShader] = logify(opts.vertexShader, opts.fragmentShader);
-  return SM({ ...opts, vertexShader, fragmentShader });
+  return new THREE.ShaderMaterial({ ...opts, vertexShader, fragmentShader });
 }
 
 const FOG_GLSL = `
@@ -66,8 +66,8 @@ export function computeEnv(hour, env) {
   const sunCol = sunDay.multiplyScalar(1.95 * Math.max(0, Math.min(1, (altDeg + 3) / 12)));
   const moonCol = new THREE.Color('#5d6f96').multiplyScalar(0.5);
   env.uSunColor.value.copy(sunCol.lerp(moonCol, night));
-  env.uAmbSky.value.copy(c('#b9d0e2', '#c9a68c', dusk * 0.7).lerp(new THREE.Color('#2b3a55'), night).multiplyScalar(1.0 - 0.25 * dusk * (1 - night)));
-  env.uAmbGround.value.copy(c('#8f8878', '#7d6a58', dusk).lerp(new THREE.Color('#141a26'), night));
+  env.uAmbSky.value.copy(c('#b9d0e2', '#c9a68c', dusk * 0.7).lerp(new THREE.Color('#2b3a55'), night).multiplyScalar(1.12));
+  env.uAmbGround.value.copy(c('#8f8878', '#8a7462', dusk).lerp(new THREE.Color('#141a26'), night));
   env.uFogColor.value.copy(c('#dde6ee', '#eccaa6', dusk * 0.85).lerp(new THREE.Color('#0d1420'), night));
   env.uFogDensity.value = 0.000026 + dusk * 0.000012 + night * 0.000009;
   env.uNight.value = night;
@@ -125,7 +125,9 @@ export function buildingsMaterial(env) {
         vec3 V = normalize(uCamPos - vWorld);
         float fres = pow(1.0 - abs(dot(N, V)), 3.0);
         vec3 skyRef = uAmbSky * 1.35 + uSunColor * 0.12;
-        col = mix(col, mix(col * 0.7, skyRef, 0.5 + 0.4 * fres), glass * 0.72);
+        float floorLine = glass * (1.0 - step(0.12, fract(vWorld.y / 3.02))) * 0.35;
+        col = mix(col, mix(col * 0.7, skyRef, 0.30 + 0.45 * fres), glass * 0.72);
+        col *= 1.0 - floorLine;
         float lam = max(dot(N, uSunDir), 0.0);
         vec3 hemi = mix(uAmbGround, uAmbSky, N.y * 0.5 + 0.5);
         float ao = clamp(vWorld.y / 7.0, 0.0, 1.0) * 0.30 + 0.70;
@@ -140,6 +142,7 @@ export function buildingsMaterial(env) {
 export function flatMaterial(env) {
   return SM({
     uniforms: env,
+    side: THREE.DoubleSide,
     vertexShader: `
       attribute vec3 color;
       varying vec3 vColor;
@@ -168,6 +171,7 @@ export function flatMaterial(env) {
 export function seaMaterial(env) {
   return SM({
     uniforms: env,
+    side: THREE.DoubleSide,
     vertexShader: `
       varying vec3 vWorld;
       void main() {
@@ -192,7 +196,9 @@ export function seaMaterial(env) {
                 + wnoise(p * 0.061 - vec2(t * 0.05, t * 0.09)) * 0.5
                 + wnoise(p * 0.16 + vec2(t * 0.12, -t * 0.07)) * 0.25;
         w /= 1.75;
-        vec3 N = normalize(vec3(dFdx(w) * 34.0, 1.0, dFdy(w) * 34.0));
+        float dist = length(uCamPos - vWorld);
+        float att = clamp(1.0 - dist / 2600.0, 0.0, 1.0);
+        vec3 N = normalize(vec3(dFdx(w) * 34.0 * att, 1.0, dFdy(w) * 34.0 * att));
         vec3 deep = mix(vec3(0.075, 0.26, 0.34), vec3(0.015, 0.05, 0.10), uNight);
         vec3 shallow = mix(vec3(0.13, 0.42, 0.47), vec3(0.03, 0.09, 0.14), uNight);
         vec3 col = mix(deep, shallow, w * w);
@@ -200,9 +206,13 @@ export function seaMaterial(env) {
         float fres = pow(1.0 - max(dot(vec3(0, 1, 0), V), 0.0), 2.2);
         col = mix(col, uAmbSky * (1.1 - 0.5 * uNight), fres * 0.75);
         vec3 R = reflect(-uSunDir, N);
-        float spec = pow(max(dot(R, V), 0.0), 140.0) * (2.2 - uNight * 1.2);
-        col += uSunColor * spec;
-        gl_FragColor = vec4(applyFog(col, length(uCamPos - vWorld)), 1.0);
+        float spec = pow(max(dot(R, V), 0.0), 220.0) * (1.4 - uNight * 0.7) * (0.25 + 0.75 * att);
+        // broad sun-glitter streak on the horizon-facing water
+        vec2 sunH = normalize(uSunDir.xz + vec2(1e-5));
+        vec2 vH = normalize(-V.xz + vec2(1e-5));
+        float streak = pow(max(dot(sunH, vH), 0.0), 22.0) * pow(1.0 - abs(V.y), 3.0) * 0.35 * max(uSunDir.y + 0.05, 0.0);
+        col += uSunColor * (spec + streak);
+        gl_FragColor = vec4(applyFog(col, dist), 1.0);
       }`,
   });
 }
@@ -210,6 +220,7 @@ export function seaMaterial(env) {
 export function foamMaterial(env) {
   return SM({
     uniforms: env,
+    side: THREE.DoubleSide,
     transparent: true,
     depthWrite: false,
     vertexShader: `
@@ -338,8 +349,8 @@ export function haloMaterial(env) {
       void main() {
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
         float d = length(mv.xyz);
-        gl_PointSize = clamp(2600.0 / d, 2.0, 26.0);
-        vFade = clamp(1.0 - d / 5200.0, 0.0, 1.0);
+        gl_PointSize = clamp(3000.0 / d, 2.5, 26.0);
+        vFade = clamp(1.0 - d / 15000.0, 0.0, 1.0);
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: `
