@@ -1,0 +1,13 @@
+{
+  "name": "tel-aviv-3d",
+  "private": true,
+  "description": "Full 3D model of Tel Aviv built from OpenStreetMap data",
+  "scripts": {
+    "build": "esbuild js/main.js --bundle --minify --format=iife --outfile=bundle.js",
+    "serve": "python3 -m http.server 8123"
+  },
+  "dependencies": {
+    "earcut": "^2.2.4",
+    "three": "^0.160.0"
+  }
+}
