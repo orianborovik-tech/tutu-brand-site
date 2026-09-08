@@ -82,6 +82,26 @@ const TY_HE = ['מגורים', 'מגדל', 'תעשייה', 'בית תפילה', 
 
 export function attachPicking(dom, camera, tileMeshes, buildingMeta, popup) {
   const ray = new THREE.Raycaster();
+  window.__pickAll = (cx, cy) => {
+    const r = dom.getBoundingClientRect();
+    ray.setFromCamera({ x: ((cx - r.left) / r.width) * 2 - 1, y: -((cy - r.top) / r.height) * 2 + 1 }, camera);
+    const hits = ray.intersectObjects(window.__dbg.scene.children, true);
+    return hits.slice(0, 5).map((h) => ({
+      d: h.distance | 0, type: h.object.type, y: h.point.y.toFixed(2),
+      frag: h.object.material && h.object.material.fragmentShader ? h.object.material.fragmentShader.slice(400, 430) : '',
+      wnoise: !!(h.object.material && h.object.material.fragmentShader && h.object.material.fragmentShader.includes('wnoise')),
+    }));
+  };
+  window.__pick = (cx, cy) => {
+    const r = dom.getBoundingClientRect();
+    ray.setFromCamera({ x: ((cx - r.left) / r.width) * 2 - 1, y: -((cy - r.top) / r.height) * 2 + 1 }, camera);
+    const hits = ray.intersectObjects(tileMeshes, false);
+    if (!hits.length) return { hits: 0 };
+    const h = hits[0];
+    const idA = h.object.geometry.getAttribute('aId');
+    return { hits: hits.length, d: h.distance | 0, id: idA ? idA.getX(h.face.a) : -1,
+             meta: buildingMeta[idA.getX(h.face.a)] };
+  };
   let downPos = null;
   dom.addEventListener('pointerdown', (e) => { downPos = [e.clientX, e.clientY]; });
   dom.addEventListener('pointerup', (e) => {

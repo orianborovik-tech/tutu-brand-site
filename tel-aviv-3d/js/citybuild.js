@@ -136,7 +136,7 @@ export async function buildCity(data, scene, env, onProgress) {
       for (let k = 0; k < o0.length; k += 2) { cx += o0[k]; cz += o0[k + 1]; }
       cx /= o0.length / 2; cz /= o0.length / 2;
       const metaIdx = refs.buildingMeta.length;
-      refs.buildingMeta.push({ nm: b.nm, h, ty: b.ty, cx, cz, part: b.part });
+      refs.buildingMeta.push({ nm: b.nm !== 0xFFFF ? data.meta.names[b.nm] : null, h, ty: b.ty, cx, cz, part: b.part });
       const acc = tileFor(cx, cz);
 
       for (const { outer, inners } of b.outers) {
@@ -267,8 +267,8 @@ export async function buildCity(data, scene, env, onProgress) {
   const GX0 = gb[0] - 2500, GZ0 = gb[1] - 2500, GX1 = gb[2] + 2500, GZ1 = gb[3] + 2500;
   const gcol = hex('#b3aa9c');
   {
-    const a = gAcc.vert(GX0, -0.45, GZ0, gcol), b2 = gAcc.vert(GX1, -0.45, GZ0, gcol);
-    const c2 = gAcc.vert(GX1, -0.45, GZ1, gcol), d2 = gAcc.vert(GX0, -0.45, GZ1, gcol);
+    const a = gAcc.vert(GX0, -1.2, GZ0, gcol), b2 = gAcc.vert(GX1, -1.2, GZ0, gcol);
+    const c2 = gAcc.vert(GX1, -1.2, GZ1, gcol), d2 = gAcc.vert(GX0, -1.2, GZ1, gcol);
     gAcc.idx.push(a, b2, c2, a, c2, d2);
   }
   const groundMesh = new THREE.Mesh(gAcc.geometry(), fMat);
@@ -277,7 +277,17 @@ export async function buildCity(data, scene, env, onProgress) {
 
   if (data.sea) {
     const sAcc = new Acc(false);
-    fillPoly(sAcc, data.sea, [], -0.33, [255, 255, 255]);
+    fillPoly(sAcc, data.sea, [], -0.2, [255, 255, 255]);
+    // far backdrop water beyond the detailed coast polygon, so a tilted camera
+    // never sees past the sea (simple quads: no huge-polygon triangulation)
+    const W = [255, 255, 255];
+    const E2 = 4100, FAR = 34000;
+    const quad = (x0, z0, x1, z1) => {
+      const a = sAcc.vert(x0, -0.42, z0, W), b2 = sAcc.vert(x1, -0.42, z0, W);
+      const c2 = sAcc.vert(x1, -0.42, z1, W), d2 = sAcc.vert(x0, -0.42, z1, W);
+      sAcc.idx.push(a, b2, c2, a, c2, d2);
+    };
+    quad(gb[0] - FAR, gb[1] - FAR, gb[0] - E2 + 100, gb[3] + FAR); // west
     const sg = sAcc.geometry();
     const seaMesh = new THREE.Mesh(sg, seaMaterial(env));
     seaMesh.matrixAutoUpdate = false;
@@ -297,7 +307,7 @@ export async function buildCity(data, scene, env, onProgress) {
     if (runs.length) {
       refs.coastLine = new Float32Array(runs[0]);
       const foamAcc = new Acc(false);
-      foamRibbon(foamAcc, refs.coastLine, data.sea, 15, -0.2);
+      foamRibbon(foamAcc, refs.coastLine, data.sea, 15, -0.08);
       const fg = foamAcc.geometry();
       fg.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(foamAcc.uvArr), 2));
       const foamMesh = new THREE.Mesh(fg, foamMaterial(env));

@@ -300,13 +300,14 @@ const CAR_COLORS = ['#e8e8e8', '#d0d0d0', '#b8bcc0', '#3a3d42', '#606468', '#8f9
 
 export function makeTraffic(refs, env, scene) {
   const rng = mulberry32(424242);
-  const SPACING = [36, 60, 92, 140, 260];
+  const SPACING = [26, 52, 88, 140, 260];
   const SPEED = [24, 13.5, 11.5, 9.5, 7];
   const cars = [];
   const buses = [];
-  for (const p of refs.carPaths) {
+  const ordered = [...refs.carPaths].sort((a, b) => a.cls - b.cls);
+  for (const p of ordered) {
     const n = Math.floor(p.len / SPACING[p.cls]);
-    for (let k = 0; k < n && cars.length < 1500; k++) {
+    for (let k = 0; k < n && cars.length < 2200; k++) {
       cars.push({
         p, s: rng() * p.len, dir: p.oneway ? 1 : (rng() < 0.5 ? 1 : -1),
         v: SPEED[p.cls] * (0.85 + rng() * 0.4),
@@ -314,7 +315,7 @@ export function makeTraffic(refs, env, scene) {
         seg: 0, ci: (rng() * CAR_COLORS.length) | 0,
       });
     }
-    if (p.cls <= 2 && p.len > 500 && buses.length < 90 && rng() < 0.5) {
+    if (p.cls <= 2 && p.len > 500 && buses.length < 110 && rng() < 0.5) {
       buses.push({
         p, s: rng() * p.len, dir: p.oneway ? 1 : (rng() < 0.5 ? 1 : -1),
         v: SPEED[p.cls] * 0.8, lane: 2.2, seg: 0, ci: 0,

@@ -334,27 +334,42 @@ def stitch_coast(segments):
 def build_sea(coast_chains):
     """Close the main coastline chain against an expanded bbox → sea polygon."""
     if not coast_chains: return None
-    E = 42000  # 4.2 km beyond bbox
-    x_lo, x_hi = X_MIN - E, X_MAX + E
-    z_lo, z_hi = Z_MIN - E, Z_MAX + E
+    # long detailed strip along the real coast; renderer adds a west backdrop
+    x_lo, x_hi = X_MIN - 42000, X_MAX + 42000
+    z_lo, z_hi = Z_MIN - 180000, Z_MAX + 180000
     chain = coast_chains[0]
     pts = [(chain[i], chain[i+1]) for i in range(0, len(chain), 2)]
     inside = [p for p in pts if x_lo <= p[0] <= x_hi and z_lo <= p[1] <= z_hi]
     if len(inside) < 2: return None
     # clip chain to rect: keep the longest run of inside points, extended to borders
     runs, cur = [], []
-    for p in pts:
-        if x_lo <= p[0] <= x_hi and z_lo <= p[1] <= z_hi: cur.append(p)
+    for i, p in enumerate(pts):
+        if x_lo <= p[0] <= x_hi and z_lo <= p[1] <= z_hi: cur.append(i)
         elif cur: runs.append(cur); cur = []
     if cur: runs.append(cur)
-    run = max(runs, key=len)
-    # project run endpoints to nearest border
-    def to_border(p):
-        x, z = p
-        cands = [(abs(x - x_lo), (x_lo, z)), (abs(x - x_hi), (x_hi, z)),
-                 (abs(z - z_lo), (x, z_lo)), (abs(z - z_hi), (x, z_hi))]
-        return min(cands)[1]
-    a = to_border(run[0]); b = to_border(run[-1])
+    run_idx = max(runs, key=len)
+    run = [pts[i] for i in run_idx]
+
+    def clip_cross(p_out, p_in):
+        # exact point where segment p_out->p_in crosses the rect border
+        (x0, z0), (x1, z1) = p_out, p_in
+        t = 0.0
+        if x0 < x_lo: t = max(t, (x_lo - x0) / (x1 - x0))
+        if x0 > x_hi: t = max(t, (x_hi - x0) / (x1 - x0))
+        if z0 < z_lo: t = max(t, (z_lo - z0) / (z1 - z0))
+        if z0 > z_hi: t = max(t, (z_hi - z0) / (z1 - z0))
+        x, z = x0 + (x1 - x0) * t, z0 + (z1 - z0) * t
+        # snap to the border exactly so border_pos() classifies it
+        d = min((abs(x - x_lo), 0), (abs(x - x_hi), 1), (abs(z - z_lo), 2), (abs(z - z_hi), 3))[1]
+        if d == 0: x = x_lo
+        elif d == 1: x = x_hi
+        elif d == 2: z = z_lo
+        else: z = z_hi
+        return (x, z)
+
+    i0, i1 = run_idx[0], run_idx[-1]
+    a = clip_cross(pts[i0 - 1], pts[i0]) if i0 > 0 else (x_lo, pts[i0][1])
+    b = clip_cross(pts[i1 + 1], pts[i1]) if i1 < len(pts) - 1 else (x_lo, pts[i1][1])
     poly = [a] + run + [b]
     corners = [(x_lo, z_lo), (x_hi, z_lo), (x_hi, z_hi), (x_lo, z_hi)]
     def border_pos(p):
