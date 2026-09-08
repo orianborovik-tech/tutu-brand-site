@@ -1,7 +1,7 @@
 // Turns the decoded OSM dataset into merged, tiled Three.js geometry.
 import * as THREE from 'three';
 import earcut from 'earcut';
-import { buildingsMaterial, flatMaterial, seaMaterial, foamMaterial } from './shaders.js';
+import { buildingsMaterial, flatMaterial, roadsMaterial, seaMaterial, foamMaterial } from './shaders.js';
 
 export function mulberry32(seed) {
   let a = seed >>> 0;
@@ -48,12 +48,15 @@ const PAL = {
   glass: ['#9fb6c9', '#8fa8bd', '#a8bccc', '#8298ae'].map(hex),
 };
 const TY_PAL = [PAL.res, PAL.glass, PAL.ind, PAL.worship, PAL.hotel, PAL.public, PAL.comm];
+const ROOF_TERRACOTTA = hex('#b06045');
+const ROOF_DOME = hex('#c9c2ae');
 
 const ROAD_STYLE = [ // width, y, color
   [19.0, 0.30, hex('#33363c')], [15.0, 0.27, hex('#3a3d43')], [12.0, 0.25, hex('#3e4147')],
   [9.5, 0.23, hex('#43464c')], [7.0, 0.21, hex('#4a4d52')], [4.2, 0.19, hex('#54565a')],
   [2.7, 0.17, hex('#a39b8d')], [3.4, 0.15, hex('#5a5550')], [4.5, 0.45, hex('#b0aa9e')],
 ];
+const SIDEWALK_COL = hex('#948d80');
 
 const AREA_STYLE = { // color, y
   0: [hex('#2e6d84'), 0.06], 1: [hex('#83a45f'), 0.12], 2: [hex('#5f8148'), 0.13],
@@ -71,7 +74,7 @@ class Acc {
   }
   vert(x, y, z, c, u, v, id, fl) {
     this.pos.push(x, y, z); this.col.push(c[0], c[1], c[2]);
-    if (this.uv) { this.uv.push(u, v); this.id.push(id); this.flags.push(fl); }
+    if (this.uv) { this.uv.push(u || 0, v || 0); this.id.push(id || 0); this.flags.push(fl || 0); }
     return this.n++;
   }
   geometry() {
@@ -91,8 +94,10 @@ class Acc {
 
 export async function buildCity(data, scene, env, onProgress) {
   const refs = {
-    tileMeshes: [], buildingMeta: [], carPaths: [], parks: [], roadsForGreen: [],
-    dudSpots: [], acSpots: [], beacons: [], coastLine: null, stats: {},
+    tileMeshes: [], buildingMeta: [], carPaths: [], pedPaths: [], railPaths: [],
+    parks: [], roadsForGreen: [], dudSpots: [], acSpots: [], beacons: [],
+    balconySpots: [], antennaSpots: [], roadGrid: new Map(),
+    coastLine: null, stats: {},
   };
   const TILE = 1500;
   const tiles = new Map();
@@ -105,9 +110,9 @@ export async function buildCity(data, scene, env, onProgress) {
 
   // ------------------------------------------------------------ buildings --
   const B = data.buildings;
-  let dudCap = 60000, acCap = 30000;
-  for (let start = 0; start < B.length; start += 2400) {
-    const endI = Math.min(B.length, start + 2400);
+  let dudCap = 60000, acCap = 30000, balCap = 90000, antCap = 9000;
+  for (let start = 0; start < B.length; start += 2200) {
+    const endI = Math.min(B.length, start + 2200);
     for (let i = start; i < endI; i++) {
       const b = B[i];
       const rng = mulberry32(i * 2654435761 + 7);
@@ -119,6 +124,8 @@ export async function buildCity(data, scene, env, onProgress) {
       }
       if (mh > 0 && h <= mh) h = mh + 4;
       const glass = (h >= 76 || (b.ty === 6 && h >= 42)) ? 1 : 0;
+      const comm = (b.ty === 6 || b.ty === 4) && !glass ? 1 : 0;
+      const flags = glass | (comm << 1);
       let c;
       if (b.col > 0 && data.meta.colours[b.col - 1]) c = hex(data.meta.colours[b.col - 1]);
       else {
@@ -127,7 +134,7 @@ export async function buildCity(data, scene, env, onProgress) {
       }
       const jit = 0.95 + rng() * 0.09;
       const col = [Math.min(255, c[0] * jit) | 0, Math.min(255, c[1] * jit) | 0, Math.min(255, c[2] * jit) | 0];
-      const roofCol = [(col[0] * 0.82) | 0, (col[1] * 0.82) | 0, (col[2] * 0.83) | 0];
+      let roofCol = [(col[0] * 0.82) | 0, (col[1] * 0.82) | 0, (col[2] * 0.83) | 0];
 
       const o0 = b.outers[0].outer;
       const area = Math.abs(ringAreaXZ(o0));
@@ -139,8 +146,20 @@ export async function buildCity(data, scene, env, onProgress) {
       refs.buildingMeta.push({ nm: b.nm !== 0xFFFF ? data.meta.names[b.nm] : null, h, ty: b.ty, cx, cz, part: b.part });
       const acc = tileFor(cx, cz);
 
+      // roof style: OSM roof:shape → apex fan; flat roofs get a parapet rim
+      const shaped = b.rsh > 0 && area < 2600;
+      const roofH = shaped ? (b.rh > 0.5 ? b.rh : Math.min(4.5, Math.sqrt(area) * 0.22 + 1)) : 0;
+      const parapet = !shaped && !glass && h >= 6 && area >= 55 ? 0.85 : 0;
+      if (shaped) {
+        roofCol = b.rsh === 4 ? ROOF_DOME.slice() : (b.ty === 0 || b.ty === 3 ? ROOF_TERRACOTTA.slice() : roofCol);
+        const rj = 0.9 + rng() * 0.18;
+        roofCol = [Math.min(255, roofCol[0] * rj) | 0, Math.min(255, roofCol[1] * rj) | 0, Math.min(255, roofCol[2] * rj) | 0];
+      }
+      const wallTop = h + parapet;
+      const isResLike = b.ty === 0 || b.ty === 4 || b.ty === 5;
+
       for (const { outer, inners } of b.outers) {
-        // walls
+        // walls (uv: u = facade meters, v = roofline height for the shader)
         for (const ring of [outer, ...inners]) {
           const n = ring.length / 2;
           let d = 0;
@@ -150,32 +169,66 @@ export async function buildCity(data, scene, env, onProgress) {
             const x1 = ring[k2 * 2], z1 = ring[k2 * 2 + 1];
             const len = Math.hypot(x1 - x0, z1 - z0);
             if (len < 0.05) continue;
-            const a = acc.vert(x0, mh, z0, col, d, 0, metaIdx, glass);
-            const bb = acc.vert(x1, mh, z1, col, d + len, 0, metaIdx, glass);
-            const cc = acc.vert(x1, h, z1, col, d + len, 0, metaIdx, glass);
-            const dd = acc.vert(x0, h, z0, col, d, 0, metaIdx, glass);
+            const a = acc.vert(x0, mh, z0, col, d, h, metaIdx, flags);
+            const bb = acc.vert(x1, mh, z1, col, d + len, h, metaIdx, flags);
+            const cc = acc.vert(x1, wallTop, z1, col, d + len, h, metaIdx, flags);
+            const dd = acc.vert(x0, wallTop, z0, col, d, h, metaIdx, flags);
             acc.idx.push(a, bb, cc, a, cc, dd);
             d += len;
+
+            // balconies on street-scale residential facades
+            if (ring === outer && !b.part && isResLike && !glass && balCap > 0 &&
+                h >= 8.5 && h <= 46 && len >= 7.5) {
+              let nx = z1 - z0, nz = -(x1 - x0);
+              const nl = Math.hypot(nx, nz) || 1;
+              nx /= nl; nz /= nl;
+              const midx = (x0 + x1) / 2, midz = (z0 + z1) / 2;
+              if (nx * (midx - cx) + nz * (midz - cz) < 0) { nx = -nx; nz = -nz; }
+              const ry = Math.atan2(-nz, nx);
+              const slots = Math.min(4, Math.floor(len / 7.6));
+              const floors = Math.min(7, Math.floor((h - 3.2) / 3.0));
+              for (let s2 = 0; s2 < slots; s2++) {
+                if (rng() > 0.62) continue;
+                const t = ((s2 + 0.5) / slots) * len;
+                const bx = x0 + (x1 - x0) * (t / len), bz = z0 + (z1 - z0) * (t / len);
+                for (let f = 1; f <= floors && balCap > 0; f++) {
+                  if (rng() < 0.2) continue;
+                  refs.balconySpots.push(bx + nx * 0.05, mh + f * 3.0 + 0.1, bz + nz * 0.05, ry);
+                  balCap--;
+                }
+              }
+            }
           }
         }
-        // roof (earcut with holes)
-        const flat = [];
-        const holeIdx = [];
-        for (let k = 0; k < outer.length; k += 2) flat.push(outer[k], outer[k + 1]);
-        for (const inn of inners) {
-          holeIdx.push(flat.length / 2);
-          for (let k = 0; k < inn.length; k += 2) flat.push(inn[k], inn[k + 1]);
+        // roof
+        if (shaped) {
+          const apex = acc.vert(cx, h + roofH, cz, roofCol, 0, -1000, metaIdx, flags);
+          const n = outer.length / 2;
+          for (let k = 0; k < n; k++) {
+            const k2 = (k + 1) % n;
+            const a = acc.vert(outer[k * 2], h, outer[k * 2 + 1], roofCol, 0, -1000, metaIdx, flags);
+            const bb = acc.vert(outer[k2 * 2], h, outer[k2 * 2 + 1], roofCol, 0, -1000, metaIdx, flags);
+            acc.idx.push(a, bb, apex);
+          }
+        } else {
+          const flat = [];
+          const holeIdx = [];
+          for (let k = 0; k < outer.length; k += 2) flat.push(outer[k], outer[k + 1]);
+          for (const inn of inners) {
+            holeIdx.push(flat.length / 2);
+            for (let k = 0; k < inn.length; k += 2) flat.push(inn[k], inn[k + 1]);
+          }
+          const tris = earcut(flat, holeIdx.length ? holeIdx : null, 2);
+          const base = acc.n;
+          for (let k = 0; k < flat.length; k += 2) {
+            acc.vert(flat[k], h, flat[k + 1], roofCol, 0, -1000, metaIdx, flags);
+          }
+          for (let k = 0; k < tris.length; k++) acc.idx.push(base + tris[k]);
         }
-        const tris = earcut(flat, holeIdx.length ? holeIdx : null, 2);
-        const base = acc.n;
-        for (let k = 0; k < flat.length; k += 2) {
-          acc.vert(flat[k], h, flat[k + 1], roofCol, 0, -1000, metaIdx, glass);
-        }
-        for (let k = 0; k < tris.length; k++) acc.idx.push(base + tris[k]);
       }
 
       // rooftop micro detail spots
-      if (!b.part && h >= 5.5 && area >= 90) {
+      if (!b.part && !shaped && h >= 5.5 && area >= 90) {
         const isRes = b.ty === 0 || b.ty === 5;
         const wantDud = isRes && h <= 42 && dudCap > 0;
         const wantAc = (!isRes || h > 42 || b.ty === 6) && acCap > 0;
@@ -193,9 +246,13 @@ export async function buildCity(data, scene, env, onProgress) {
           else if (wantAc) { refs.acSpots.push(px, h, pz, rng() * Math.PI * 2); acCap--; }
         }
       }
+      if (!b.part && !shaped && h >= 7 && antCap > 0 && rng() < 0.16) {
+        refs.antennaSpots.push(cx, h + parapet, cz, rng());
+        antCap--;
+      }
       if (h >= 100) refs.beacons.push(cx, h + 2.5, cz);
     }
-    onProgress(0.05 + 0.45 * (endI / B.length), 'בונה ' + B.length.toLocaleString('he') + ' בניינים…');
+    onProgress(0.05 + 0.42 * (endI / B.length), 'בונה ' + B.length.toLocaleString('he') + ' בניינים…');
     await nextFrame();
   }
 
@@ -209,30 +266,51 @@ export async function buildCity(data, scene, env, onProgress) {
 
   // ---------------------------------------------------------------- roads --
   const fMat = flatMaterial(env);
-  const roadAcc = new Acc(false);
+  const roadAcc = new Acc(true);       // uv.x = length, uv.y = lateral, flags = class
+  const walkAcc = new Acc(false);      // sidewalks
   const R = data.roads;
   let roadLen = 0;
-  for (let start = 0; start < R.length; start += 9000) {
-    const endI = Math.min(R.length, start + 9000);
+  const gridAdd = (x, z, rec) => {
+    const k = ((x / 60) | 0) + ':' + ((z / 60) | 0);
+    let l = refs.roadGrid.get(k);
+    if (!l) { l = []; refs.roadGrid.set(k, l); }
+    l.push(rec);
+  };
+  for (let start = 0; start < R.length; start += 7000) {
+    const endI = Math.min(R.length, start + 7000);
     for (let i = start; i < endI; i++) {
       const r = R[i];
       const [w, yBase, colA] = ROAD_STYLE[r.cls];
       const y = yBase + Math.max(0, r.layer) * 7.0;
       const col = r.layer > 0 ? [colA[0] * 0.92 | 0, colA[1] * 0.92 | 0, colA[2] * 0.92 | 0] : colA;
-      const L = ribbon(roadAcc, r.pts, w, y, col);
+      const L = ribbonUV(roadAcc, r.pts, w, y, col, r.cls);
       roadLen += L;
       if (r.layer > 0) skirts(roadAcc, r.pts, w, y, 1.6, hex('#46464a'));
-      if (r.cls <= 4 && L > 150) {
-        refs.carPaths.push(makePath(r.pts, y, r.oneway, r.cls, L));
+      else if (r.cls >= 1 && r.cls <= 4 && L > 60) {
+        ribbon(walkAcc, r.pts, 2.4, y - 0.055, SIDEWALK_COL, w / 2 + 1.45);
+        ribbon(walkAcc, r.pts, 2.4, y - 0.055, SIDEWALK_COL, -(w / 2 + 1.45));
       }
+      if (r.cls <= 4 && L > 150) {
+        const p = makePath(r.pts, y, r.oneway, r.cls, L);
+        refs.carPaths.push(p);
+        // spatial grid of segments for crosswalks / bus shelters
+        for (let k = 0; k < r.pts.length / 2 - 1; k++) {
+          gridAdd(r.pts[k * 2], r.pts[k * 2 + 1], { pts: r.pts, seg: k, w, y, cls: r.cls });
+        }
+      }
+      if (r.cls === 6 && L > 90) refs.pedPaths.push(makePath(r.pts, y, 0, 6, L));
+      if (r.cls === 7 && L > 1200 && r.layer <= 0) refs.railPaths.push(makePath(r.pts, y, 0, 7, L));
       if (r.cls >= 3 && r.cls <= 6) refs.roadsForGreen.push({ pts: r.pts, w, cls: r.cls, i });
     }
-    onProgress(0.5 + 0.12 * (endI / R.length), 'סולל ' + R.length.toLocaleString('he') + ' כבישים…');
+    onProgress(0.47 + 0.12 * (endI / R.length), 'סולל כבישים, מדרכות ומסילות…');
     await nextFrame();
   }
-  const roadMesh = new THREE.Mesh(roadAcc.geometry(), fMat);
+  const roadMesh = new THREE.Mesh(roadAcc.geometry(), roadsMaterial(env));
   roadMesh.matrixAutoUpdate = false;
   scene.add(roadMesh);
+  const walkMesh = new THREE.Mesh(walkAcc.geometry(), fMat);
+  walkMesh.matrixAutoUpdate = false;
+  scene.add(walkMesh);
   refs.stats.roadKm = Math.round(roadLen / 1000);
 
   // ---------------------------------------------------------------- areas --
@@ -252,9 +330,10 @@ export async function buildCity(data, scene, env, onProgress) {
       for (const { outer, inners } of a.outers) {
         fillPoly(areaAcc, outer, inners, y, col);
         if (a.ty === 1 || a.ty === 2) refs.parks.push({ outer, inners, dense: a.ty === 2 });
+        if (a.ty === 3) refs.beaches = (refs.beaches || []).concat([{ outer, inners }]);
       }
     }
-    onProgress(0.62 + 0.06 * (endI / A.length), 'משתיל פארקים, חופים ומגרשים…');
+    onProgress(0.6 + 0.06 * (endI / A.length), 'משתיל פארקים, חופים ומגרשים…');
     await nextFrame();
   }
   const areaMesh = new THREE.Mesh(areaAcc.geometry(), fMat);
@@ -278,8 +357,7 @@ export async function buildCity(data, scene, env, onProgress) {
   if (data.sea) {
     const sAcc = new Acc(false);
     fillPoly(sAcc, data.sea, [], -0.2, [255, 255, 255]);
-    // far backdrop water beyond the detailed coast polygon, so a tilted camera
-    // never sees past the sea (simple quads: no huge-polygon triangulation)
+    // far backdrop water beyond the detailed coast polygon
     const W = [255, 255, 255];
     const E2 = 4100, FAR = 34000;
     const quad = (x0, z0, x1, z1) => {
@@ -293,7 +371,6 @@ export async function buildCity(data, scene, env, onProgress) {
     seaMesh.matrixAutoUpdate = false;
     scene.add(seaMesh);
 
-    // foam ribbon along the true coast part of the sea polygon
     const inb = (x, z) => x > gb[0] - 1500 && x < gb[2] + 1500 && z > gb[1] - 1500 && z < gb[3] + 1500;
     const runs = [];
     let cur = [];
@@ -316,11 +393,35 @@ export async function buildCity(data, scene, env, onProgress) {
     }
   }
 
-  onProgress(0.7, 'שופך את הים התיכון…');
+  onProgress(0.68, 'שופך את הים התיכון…');
   await nextFrame();
   refs.flatMat = fMat;
   refs.buildingsMat = bMat;
   return refs;
+}
+
+export function nearestRoad(refs, x, z) {
+  let best = null, bd = 1e9;
+  const gx = (x / 60) | 0, gz = (z / 60) | 0;
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dz = -1; dz <= 1; dz++) {
+      const l = refs.roadGrid.get((gx + dx) + ':' + (gz + dz));
+      if (!l) continue;
+      for (const rec of l) {
+        const k = rec.seg;
+        const x0 = rec.pts[k * 2], z0 = rec.pts[k * 2 + 1];
+        const x1 = rec.pts[k * 2 + 2], z1 = rec.pts[k * 2 + 3];
+        const dx1 = x1 - x0, dz1 = z1 - z0;
+        const L2 = dx1 * dx1 + dz1 * dz1 || 1;
+        let t = ((x - x0) * dx1 + (z - z0) * dz1) / L2;
+        t = Math.max(0, Math.min(1, t));
+        const px = x0 + dx1 * t, pz = z0 + dz1 * t;
+        const d = Math.hypot(x - px, z - pz);
+        if (d < bd) { bd = d; best = { px, pz, dir: Math.atan2(-(dz1), dx1), w: rec.w, y: rec.y, cls: rec.cls, d }; }
+      }
+    }
+  }
+  return best;
 }
 
 function boundsOf(ring) {
@@ -347,33 +448,55 @@ function fillPoly(acc, outer, inners, y, col) {
   for (let k = 0; k < tris.length; k++) acc.idx.push(base + tris[k]);
 }
 
-// Polyline → flat ribbon with mitered joints. Returns length in meters.
-function ribbon(acc, pts, w, y, col) {
+function miterAt(pts, i, n) {
+  const x = pts[i * 2], z = pts[i * 2 + 1];
+  let dx0 = 0, dz0 = 0, dx1 = 0, dz1 = 0;
+  if (i > 0) { dx0 = x - pts[(i - 1) * 2]; dz0 = z - pts[(i - 1) * 2 + 1]; const l = Math.hypot(dx0, dz0) || 1; dx0 /= l; dz0 /= l; }
+  if (i < n - 1) { dx1 = pts[(i + 1) * 2] - x; dz1 = pts[(i + 1) * 2 + 1] - z; const l = Math.hypot(dx1, dz1) || 1; dx1 /= l; dz1 /= l; }
+  let tx = dx0 + dx1, tz = dz0 + dz1;
+  const tl = Math.hypot(tx, tz) || 1;
+  tx /= tl; tz /= tl;
+  const cosHalf = Math.sqrt(Math.max(0.2, (1 + Math.max(-0.99, dx0 * dx1 + dz0 * dz1)) / 2)) || 1;
+  const scale = Math.min(2.2, 1 / Math.max(0.45, cosHalf));
+  return [-tz * scale, tx * scale];
+}
+
+// Road ribbon with uv (u = length, v = lateral -1..1) and class flag.
+function ribbonUV(acc, pts, w, y, col, cls) {
   const n = pts.length / 2;
   if (n < 2) return 0;
   const hw = w / 2;
-  let len = 0;
+  let len = 0, d = 0;
   let prevL = -1, prevR = -1;
   for (let i = 0; i < n; i++) {
     const x = pts[i * 2], z = pts[i * 2 + 1];
-    let dx0 = 0, dz0 = 0, dx1 = 0, dz1 = 0;
-    if (i > 0) { dx0 = x - pts[(i - 1) * 2]; dz0 = z - pts[(i - 1) * 2 + 1]; const l = Math.hypot(dx0, dz0) || 1; dx0 /= l; dz0 /= l; len += l; }
-    if (i < n - 1) { dx1 = pts[(i + 1) * 2] - x; dz1 = pts[(i + 1) * 2 + 1] - z; const l = Math.hypot(dx1, dz1) || 1; dx1 /= l; dz1 /= l; }
-    let tx = dx0 + dx1, tz = dz0 + dz1;
-    const tl = Math.hypot(tx, tz) || 1;
-    tx /= tl; tz /= tl;
-    // right side normal
-    let nx = -tz, nz = tx;
-    // miter scale
-    const dot = tx * dx1 + tz * dz1;
-    const scale = Math.min(2.2, 1 / Math.max(0.45, Math.abs(dot) < 1 ? Math.sqrt((1 + Math.max(-0.99, dx0 * dx1 + dz0 * dz1)) / 2) || 1 : 1));
-    const ox = nx * hw * scale, oz = nz * hw * scale;
-    const l = acc.vert(x - ox, y, z - oz, col);
-    const r = acc.vert(x + ox, y, z + oz, col);
+    if (i > 0) d += Math.hypot(x - pts[(i - 1) * 2], z - pts[(i - 1) * 2 + 1]);
+    const [ox, oz] = miterAt(pts, i, n);
+    const l = acc.vert(x - ox * hw, y, z - oz * hw, col, d, -1, 0, cls);
+    const r = acc.vert(x + ox * hw, y, z + oz * hw, col, d, 1, 0, cls);
     if (prevL >= 0) acc.idx.push(prevL, prevR, r, prevL, r, l);
     prevL = l; prevR = r;
   }
+  len = d;
   return len;
+}
+
+// Plain ribbon, optionally offset sideways (for sidewalks).
+function ribbon(acc, pts, w, y, col, offset = 0) {
+  const n = pts.length / 2;
+  if (n < 2) return 0;
+  const hw = w / 2;
+  let prevL = -1, prevR = -1;
+  for (let i = 0; i < n; i++) {
+    const x = pts[i * 2], z = pts[i * 2 + 1];
+    const [ox, oz] = miterAt(pts, i, n);
+    const cxp = x + ox * offset, czp = z + oz * offset;
+    const l = acc.vert(cxp - ox * hw, y, czp - oz * hw, col);
+    const r = acc.vert(cxp + ox * hw, y, czp + oz * hw, col);
+    if (prevL >= 0) acc.idx.push(prevL, prevR, r, prevL, r, l);
+    prevL = l; prevR = r;
+  }
+  return 0;
 }
 
 function skirts(acc, pts, w, y, depth, col) {
@@ -383,24 +506,20 @@ function skirts(acc, pts, w, y, depth, col) {
     let pa = -1, pb = -1;
     for (let i = 0; i < n; i++) {
       const x = pts[i * 2], z = pts[i * 2 + 1];
-      let dx = 0, dz = 0;
-      if (i > 0) { dx += x - pts[(i - 1) * 2]; dz += z - pts[(i - 1) * 2 + 1]; }
-      if (i < n - 1) { dx += pts[(i + 1) * 2] - x; dz += pts[(i + 1) * 2 + 1] - z; }
-      const l = Math.hypot(dx, dz) || 1;
-      const nx = (-dz / l) * side, nz = (dx / l) * side;
-      const a = acc.vert(x + nx * hw, y, z + nz * hw, col);
-      const b = acc.vert(x + nx * hw, y - depth, z + nz * hw, col);
+      const [ox, oz] = miterAt(pts, i, n);
+      const a = acc.vert(x + ox * hw * side, y, z + oz * hw * side, col);
+      const b = acc.vert(x + ox * hw * side, y - depth, z + oz * hw * side, col);
       if (pa >= 0) acc.idx.push(pa, pb, b, pa, b, a);
       pa = a; pb = b;
     }
   }
 }
 
-// Foam strip: offset the coast polyline toward the sea side.
 function foamRibbon(acc, line, seaRing, w, y) {
   const n = line.length / 2;
   acc.uvArr = [];
   let pa = -1, pb = -1, d = 0;
+  let sign = null;
   for (let i = 0; i < n; i++) {
     const x = line[i * 2], z = line[i * 2 + 1];
     let dx = 0, dz = 0;
@@ -408,14 +527,12 @@ function foamRibbon(acc, line, seaRing, w, y) {
     if (i < n - 1) { dx += line[(i + 1) * 2] - x; dz += line[(i + 1) * 2 + 1] - z; }
     const l = Math.hypot(dx, dz) || 1;
     let nx = -dz / l, nz = dx / l;
-    if (i === 0) {
-      // choose the offset direction that lands inside the sea polygon
+    if (sign === null) {
       if (!pointInRing(seaRing, x + nx * 20, z + nz * 20)) { nx = -nx; nz = -nz; }
-      foamRibbon.sign = [nx, nz];
+      sign = [nx, nz];
     } else {
-      const [sx, sz] = foamRibbon.sign;
-      if (nx * sx + nz * sz < 0) { nx = -nx; nz = -nz; }
-      foamRibbon.sign = [nx, nz];
+      if (nx * sign[0] + nz * sign[1] < 0) { nx = -nx; nz = -nz; }
+      sign = [nx, nz];
     }
     const a = acc.vert(x, y, z, [255, 255, 255]);
     const b = acc.vert(x + nx * w, y, z + nz * w, [255, 255, 255]);

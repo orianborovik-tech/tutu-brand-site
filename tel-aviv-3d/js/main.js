@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { loadData, lonlatToLocal } from './decode.js';
 import { buildCity } from './citybuild.js';
-import { makeVegetation, makeStreetFurniture, makeTraffic, makeBoats } from './scenery.js';
+import { makeVegetation, makeStreetFurniture, makeStreetLife, makeTraffic, makeBoats } from './scenery.js';
 import { CityControls } from './controls.js';
 import { makeEnvUniforms, computeEnv, skyMaterial } from './shaders.js';
 import { LANDMARKS, localizeLandmarks, buildHud, makeLabels, attachPicking, runTour } from './ui.js';
@@ -49,7 +49,12 @@ async function main() {
   await new Promise(requestAnimationFrame);
   const furn = makeStreetFurniture(data, refs, env, scene);
 
-  prog(0.92, 'משחרר תנועה לאיילון…');
+  prog(0.88, 'תולה מרפסות, מציב תחנות ומעברי חציה…');
+  await new Promise(requestAnimationFrame);
+  const life = makeStreetLife(data, refs, env, scene);
+  console.log('street life:', life.counts);
+
+  prog(0.93, 'משחרר תנועה לאיילון…');
   await new Promise(requestAnimationFrame);
   const traffic = makeTraffic(refs, env, scene);
   const boats = makeBoats(env, scene, lonlatToLocal, data.meta, data.sea);
@@ -73,7 +78,7 @@ async function main() {
       if (key === 'trees') veg.group.visible = on;
       else if (key === 'traffic') traffic.group.visible = on;
       else if (key === 'labels') labels.visible = on;
-      else if (key === 'furniture') { furn.group.visible = on; boats.group.visible = on; }
+      else if (key === 'furniture') { furn.group.visible = on; boats.group.visible = on; life.group.visible = on; }
     },
   });
   hud.setStats({

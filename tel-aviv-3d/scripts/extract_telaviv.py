@@ -67,6 +67,9 @@ def norm_colour(v):
 
 B_RES, B_GLASS, B_IND, B_WORSHIP, B_HOTEL, B_PUBLIC, B_COMM = 0, 1, 2, 3, 4, 5, 6
 
+ROOF_SHAPE = {'gabled': 1, 'hipped': 2, 'pyramidal': 3, 'dome': 4, 'onion': 4,
+              'half-hipped': 2, 'round': 4, 'gambrel': 1, 'mansard': 2}
+
 def classify_building(t):
     b = (t.get('building') or t.get('building:part') or '').lower()
     if t.get('amenity') == 'place_of_worship' or b in ('synagogue', 'mosque', 'church', 'cathedral', 'chapel'):
@@ -105,7 +108,8 @@ def stage_extract(pbf, workdir):
     import osmium.filter as ofilter
     t0 = time.time()
     D = {'buildings': [], 'roads': [], 'areas': [], 'trees': array('i'), 'lamps': array('i'),
-         'signals': array('i'), 'coast': [], 'coast_rings': []}
+         'signals': array('i'), 'busstops': array('i'), 'benches': array('i'),
+         'lifeguards': array('i'), 'coast': [], 'coast_rings': []}
 
     def ring_dm(ring):
         pts = array('i')
@@ -145,7 +149,7 @@ def stage_extract(pbf, workdir):
           .with_filter(ofilter.EmptyTagFilter())
           .with_filter(ofilter.KeyFilter('building', 'building:part', 'highway', 'natural',
                                          'leisure', 'landuse', 'waterway', 'man_made',
-                                         'railway', 'amenity', 'place', 'tourism')))
+                                         'railway', 'amenity', 'place', 'tourism', 'emergency', 'lifeguard')))
     for o in fp:
         n_scanned += 1
         if o.is_node():
@@ -157,6 +161,10 @@ def stage_extract(pbf, workdir):
             if t.get('natural') == 'tree': D['trees'].append(x); D['trees'].append(z)
             elif t.get('highway') == 'street_lamp': D['lamps'].append(x); D['lamps'].append(z)
             elif t.get('highway') == 'traffic_signals': D['signals'].append(x); D['signals'].append(z)
+            elif t.get('highway') == 'bus_stop': D['busstops'].append(x); D['busstops'].append(z)
+            elif t.get('amenity') == 'bench': D['benches'].append(x); D['benches'].append(z)
+            elif t.get('emergency') == 'lifeguard_tower' or t.get('lifeguard') == 'tower':
+                D['lifeguards'].append(x); D['lifeguards'].append(z)
         elif o.is_way():
             t = o.tags
             nat = t.get('natural')
@@ -220,12 +228,15 @@ def stage_extract(pbf, workdir):
                 mlv = parse_num(t.get('building:min_level'))
                 if h is None and lv is not None: h = lv * 3.1 + 1.2
                 if mh is None and mlv is not None: mh = mlv * 3.1
+                rsh = ROOF_SHAPE.get((t.get('roof:shape') or '').split(';')[0], 0)
+                rh = parse_len(t.get('roof:height'))
                 D['buildings'].append({
                     'rings': rings, 'part': part,
                     'h': int(max(0, min(6500, (h or 0) * 10))),
                     'mh': int(max(0, min(6500, (mh or 0) * 10))),
                     'ty': classify_building(t), 'nm': name,
                     'col': norm_colour(t.get('building:colour')),
+                    'rsh': rsh, 'rh': int(max(0, min(200, (rh or 0) * 10))),
                 })
             else:
                 D['areas'].append({'ty': aty, 'rings': rings, 'nm': name})
@@ -472,6 +483,8 @@ def stage_pack(workdir, outdir):
         w_u16(b_body, b['mh'])
         w_u16(b_body, nm_id(b['nm']))
         w_u8(b_body, col_id(b['col']))
+        w_u8(b_body, b.get('rsh', 0))
+        w_u8(b_body, b.get('rh', 0))
         total = sum(1 + len(inn) for _, inn in outers)
         w_u8(b_body, min(255, total))
         w_u8(b_body, len(outers))
@@ -534,6 +547,9 @@ def stage_pack(workdir, outdir):
     section(4, pack_points(D['trees']))
     section(5, pack_points(D['lamps']))
     section(6, pack_points(D['signals']))
+    section(8, pack_points(D.get('busstops', array('i'))))
+    section(9, pack_points(D.get('benches', array('i'))))
+    section(10, pack_points(D.get('lifeguards', array('i'))))
 
     # sea polygon
     chains = stitch_coast(D['coast'])
@@ -555,7 +571,10 @@ def stage_pack(workdir, outdir):
         'names': names, 'colours': colours,
         'counts': {'buildings': len(D['buildings']), 'roads': len(D['roads']),
                    'areas': a_count, 'trees': len(D['trees']) // 2,
-                   'lamps': len(D['lamps']) // 2, 'signals': len(D['signals']) // 2},
+                   'lamps': len(D['lamps']) // 2, 'signals': len(D['signals']) // 2,
+                   'busstops': len(D.get('busstops', [])) // 2,
+                   'benches': len(D.get('benches', [])) // 2,
+                   'lifeguards': len(D.get('lifeguards', [])) // 2},
         'attribution': '© OpenStreetMap contributors, ODbL',
     }
     meta_b = json.dumps(meta, ensure_ascii=False, separators=(',', ':')).encode('utf-8')

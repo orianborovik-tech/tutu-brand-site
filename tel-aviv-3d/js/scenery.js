@@ -1,19 +1,22 @@
-// Instanced micro-detail: vegetation, street furniture, rooftops, traffic, boats.
+// Instanced micro-detail: vegetation, street furniture, rooftops, traffic,
+// balconies, crosswalks, beach life, pedestrians, trains, boats.
 import * as THREE from 'three';
 import { instancedMaterial, haloMaterial, SM } from './shaders.js';
-import { mulberry32, pointInRing } from './citybuild.js';
+import { mulberry32, pointInRing, nearestRoad } from './citybuild.js';
 
-// merge simple primitives into one non-indexed geometry with an aEm attribute
+// merge simple primitives into one non-indexed geometry with aEm + aVCol
 function mergeParts(parts) {
-  const pos = [], nor = [], em = [];
-  for (const { geo, mat4, e } of parts) {
-    const g = geo.toNonIndexed();
+  const pos = [], nor = [], em = [], vc = [];
+  for (const { geo, mat4, e, c } of parts) {
+    const g = geo.index ? geo.toNonIndexed() : geo;
     if (mat4) g.applyMatrix4(mat4);
     const p = g.getAttribute('position'), n = g.getAttribute('normal');
+    const pc = c || [1, 1, 1];
     for (let i = 0; i < p.count; i++) {
       pos.push(p.getX(i), p.getY(i), p.getZ(i));
       nor.push(n.getX(i), n.getY(i), n.getZ(i));
       em.push(e || 0);
+      vc.push(pc[0], pc[1], pc[2]);
     }
     geo.dispose();
   }
@@ -21,6 +24,7 @@ function mergeParts(parts) {
   g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
   g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(nor), 3));
   g.setAttribute('aEm', new THREE.BufferAttribute(new Float32Array(em), 1));
+  g.setAttribute('aVCol', new THREE.BufferAttribute(new Float32Array(vc), 3));
   return g;
 }
 
@@ -33,7 +37,7 @@ const M = (x, y, z, ry = 0, rx = 0, rz = 0, s = 1) => {
 };
 
 function makeInstanced(geo, items, env, opts = {}) {
-  // items: flat array of {x,y,z,ry,s,sy,c:[r,g,b]}
+  // items: {x,y,z,ry,s|sx/sy/sz,c:[r,g,b]}
   const mesh = new THREE.InstancedMesh(geo, instancedMaterial(env, opts), items.length);
   const colors = new Float32Array(items.length * 3);
   const m = new THREE.Matrix4();
@@ -44,7 +48,7 @@ function makeInstanced(geo, items, env, opts = {}) {
     e.set(0, it.ry || 0, 0);
     m.makeRotationFromEuler(e);
     const s = it.s || 1;
-    m.scale(v.set(s, it.sy || s, s));
+    m.scale(v.set(it.sx || s, it.sy || s, it.sz || s));
     m.setPosition(it.x, it.y, it.z);
     mesh.setMatrixAt(i, m);
     colors[i * 3] = it.c[0]; colors[i * 3 + 1] = it.c[1]; colors[i * 3 + 2] = it.c[2];
@@ -63,13 +67,10 @@ export function makeVegetation(data, refs, env, scene, cap = 95000) {
   const rng = mulberry32(1234567);
   const trees = [];
   const palms = [];
-
-  // real OSM trees
   const T = data.trees;
   for (let i = 0; i < T.length; i += 2) {
     trees.push({ x: T[i], z: T[i + 1], s: 1.1 + rng() * 1.3 });
   }
-  // park fill
   for (const park of refs.parks) {
     if (trees.length > cap) break;
     const b = [1e9, 1e9, -1e9, -1e9];
@@ -92,7 +93,6 @@ export function makeVegetation(data, refs, env, scene, cap = 95000) {
       }
     }
   }
-  // boulevard rows
   for (const rd of refs.roadsForGreen) {
     if (trees.length > cap) break;
     const wayKeep = mulberry32(rd.i * 31 + 5)();
@@ -124,7 +124,6 @@ export function makeVegetation(data, refs, env, scene, cap = 95000) {
       acc = (acc + L) % 26;
     }
   }
-  // beach palms
   if (refs.coastLine && data.sea) {
     const line = refs.coastLine;
     let acc = 0;
@@ -147,18 +146,16 @@ export function makeVegetation(data, refs, env, scene, cap = 95000) {
   }
 
   const group = new THREE.Group();
-  // trunks + canopies
   const trunkGeo = mergeParts([{ geo: new THREE.CylinderGeometry(0.13, 0.2, 2.6, 5, 1, true), mat4: M(0, 1.3, 0) }]);
-  const canopyGeo = mergeParts([{ geo: new THREE.IcosahedronGeometry(1.65, 0), mat4: M(0, 3.4, 0, 0, 0, 0, 1) }]);
-  const trunkItems = trees.map((t) => ({ x: t.x, y: 0.05, z: t.z, ry: 0, s: 0.8 + t.s * 0.3, sy: t.s, c: [0.34, 0.25, 0.18] }));
+  const canopyGeo = mergeParts([{ geo: new THREE.IcosahedronGeometry(1.65, 0), mat4: M(0, 3.4, 0) }]);
+  const trunkItems = trees.map((t) => ({ x: t.x, y: 0.05, z: t.z, s: 0.8 + t.s * 0.3, sy: t.s, c: [0.34, 0.25, 0.18] }));
   const canopyItems = trees.map((t, i) => ({
-    x: t.x, y: 0.05 + (t.s - 1) * 2.2, z: t.z, ry: 0, s: t.s, sy: t.s * 1.05,
+    x: t.x, y: 0.05 + (t.s - 1) * 2.2, z: t.z, s: t.s, sy: t.s * 1.05,
     c: GREENS[i % GREENS.length],
   }));
   group.add(makeInstanced(trunkGeo, trunkItems, env));
   group.add(makeInstanced(canopyGeo, canopyItems, env));
 
-  // palms: trunk + frond star
   const fronds = [];
   for (let k = 0; k < 7; k++) {
     const a = (k / 7) * Math.PI * 2;
@@ -166,13 +163,13 @@ export function makeVegetation(data, refs, env, scene, cap = 95000) {
     const p = g.getAttribute('position');
     for (let i = 0; i < p.count; i++) {
       const x = p.getX(i);
-      p.setY(i, -Math.pow(Math.max(0, x + 1.6) / 3.2, 2) * 1.3); // droop
+      p.setY(i, -Math.pow(Math.max(0, x + 1.6) / 3.2, 2) * 1.3);
     }
     g.computeVertexNormals();
-    fronds.push({ geo: g, mat4: M(Math.cos(a) * 1.1, 7.1, Math.sin(a) * 1.1, -a, 0, 0) });
+    fronds.push({ geo: g, mat4: M(Math.cos(a) * 1.1, 7.1, Math.sin(a) * 1.1, -a) });
   }
   const palmGeo = mergeParts([
-    { geo: new THREE.CylinderGeometry(0.14, 0.23, 7, 5, 1, true), mat4: M(0, 3.5, 0) },
+    { geo: new THREE.CylinderGeometry(0.14, 0.23, 7, 5, 1, true), mat4: M(0, 3.5, 0), c: [0.62, 0.52, 0.4] },
     ...fronds,
   ]);
   const palmItems = palms.map((t, i) => ({ x: t.x, y: 0.05, z: t.z, ry: (i * 2.39) % 6.28, s: t.s, c: PALM_GREEN[i % 3] }));
@@ -183,10 +180,10 @@ export function makeVegetation(data, refs, env, scene, cap = 95000) {
 
 export function makeStreetFurniture(data, refs, env, scene) {
   const rng = mulberry32(99991);
+  const group = new THREE.Group();
   const lamps = [];
   const L = data.lamps;
   for (let i = 0; i < L.length; i += 2) lamps.push({ x: L[i], z: L[i + 1] });
-  // procedural lamps along roads
   const SPACING = [42, 44, 52, 62, 76];
   for (const p of refs.carPaths) {
     if (lamps.length > 30000) break;
@@ -211,16 +208,14 @@ export function makeStreetFurniture(data, refs, env, scene) {
       acc = (acc + seg) % sp;
     }
   }
-  const group = new THREE.Group();
   const lampGeo = mergeParts([
     { geo: new THREE.CylinderGeometry(0.06, 0.09, 5.4, 5, 1, true), mat4: M(0, 2.7, 0) },
     { geo: new THREE.BoxGeometry(1.0, 0.07, 0.07), mat4: M(0.45, 5.35, 0) },
     { geo: new THREE.SphereGeometry(0.19, 5, 3), mat4: M(0.85, 5.3, 0), e: 1 },
   ]);
-  const lampItems = lamps.map((l) => ({ x: l.x, y: l.y || 0.15, z: l.z, ry: rng() * 6.28, s: 1, c: [0.22, 0.23, 0.25] }));
+  const lampItems = lamps.map((l) => ({ x: l.x, y: l.y || 0.15, z: l.z, ry: rng() * 6.28, c: [0.22, 0.23, 0.25] }));
   group.add(makeInstanced(lampGeo, lampItems, env));
 
-  // glow halos
   const haloPos = new Float32Array(lamps.length * 3);
   lamps.forEach((l, i) => {
     haloPos[i * 3] = l.x + 0.8; haloPos[i * 3 + 1] = (l.y || 0.15) + 5.35; haloPos[i * 3 + 2] = l.z;
@@ -235,18 +230,18 @@ export function makeStreetFurniture(data, refs, env, scene) {
   const S = data.signals;
   const sigGeo = mergeParts([
     { geo: new THREE.CylinderGeometry(0.05, 0.07, 3.1, 4, 1, true), mat4: M(0, 1.55, 0) },
-    { geo: new THREE.BoxGeometry(0.26, 0.72, 0.22), mat4: M(0, 3.35, 0), e: 1 },
+    { geo: new THREE.BoxGeometry(0.26, 0.72, 0.22), mat4: M(0, 3.35, 0), e: 1, c: [0.4, 0.4, 0.4] },
   ]);
   const sigItems = [];
   for (let i = 0; i < S.length; i += 2) {
-    sigItems.push({ x: S[i], y: 0.15, z: S[i + 1], ry: rng() * 6.28, s: 1, c: [0.15, 0.16, 0.18] });
+    sigItems.push({ x: S[i], y: 0.15, z: S[i + 1], ry: rng() * 6.28, c: [0.15, 0.16, 0.18] });
   }
   if (sigItems.length) group.add(makeInstanced(sigGeo, sigItems, env, { emColor: '#ffb033' }));
 
-  // rooftop: solar water heaters
+  // rooftop solar heaters + AC units
   const dudGeo = mergeParts([
     { geo: new THREE.CylinderGeometry(0.5, 0.5, 1.7, 6), mat4: M(0, 0.62, 0, 0, 0, Math.PI / 2) },
-    { geo: new THREE.BoxGeometry(1.55, 0.06, 1.15), mat4: M(0, 0.45, 1.05, 0, -0.5, 0) },
+    { geo: new THREE.BoxGeometry(1.55, 0.06, 1.15), mat4: M(0, 0.45, 1.05, 0, -0.5, 0), c: [0.35, 0.42, 0.5] },
   ]);
   const dudItems = [];
   const D = refs.dudSpots;
@@ -263,7 +258,7 @@ export function makeStreetFurniture(data, refs, env, scene) {
   }
   if (acItems.length) group.add(makeInstanced(acGeo, acItems, env));
 
-  // aviation warning beacons on towers ≥ 100 m
+  // aviation beacons
   if (refs.beacons.length) {
     const bg = new THREE.BufferGeometry();
     bg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(refs.beacons), 3));
@@ -295,8 +290,166 @@ export function makeStreetFurniture(data, refs, env, scene) {
   return { group, lampCount: lamps.length };
 }
 
+// Balconies, antennas, crosswalks, bus shelters, benches, beach life.
+export function makeStreetLife(data, refs, env, scene) {
+  const rng = mulberry32(31337);
+  const group = new THREE.Group();
+
+  // balconies (collected during the building pass)
+  const balGeo = mergeParts([
+    { geo: new THREE.BoxGeometry(1.35, 0.14, 2.7), mat4: M(0.72, 0, 0) },
+    { geo: new THREE.BoxGeometry(0.07, 0.85, 2.7), mat4: M(1.36, 0.48, 0), c: [0.9, 0.9, 0.88] },
+  ]);
+  const BS = refs.balconySpots;
+  const balItems = [];
+  for (let i = 0; i < BS.length; i += 4) {
+    balItems.push({ x: BS[i], y: BS[i + 1], z: BS[i + 2], ry: BS[i + 3], s: 0.92 + (i % 7) * 0.02, c: [0.88, 0.85, 0.79] });
+  }
+  if (balItems.length) group.add(makeInstanced(balGeo, balItems, env));
+
+  // rooftop antennas
+  const antGeo = mergeParts([
+    { geo: new THREE.CylinderGeometry(0.025, 0.035, 4.6, 4, 1, true), mat4: M(0, 2.3, 0) },
+    { geo: new THREE.BoxGeometry(0.7, 0.03, 0.03), mat4: M(0, 4.1, 0) },
+    { geo: new THREE.BoxGeometry(0.5, 0.03, 0.03), mat4: M(0, 3.6, 0, 0.7) },
+  ]);
+  const AN = refs.antennaSpots;
+  const antItems = [];
+  for (let i = 0; i < AN.length; i += 4) {
+    antItems.push({ x: AN[i], y: AN[i + 1], z: AN[i + 2], ry: AN[i + 3] * 6.28, c: [0.3, 0.3, 0.32] });
+  }
+  if (antItems.length) group.add(makeInstanced(antGeo, antItems, env));
+
+  // crosswalks at every real traffic signal
+  const cwStripe = [];
+  for (let k = 0; k < 6; k++) {
+    cwStripe.push({ geo: new THREE.BoxGeometry(0.42, 0.05, 1), mat4: M(-2.2 + k * 0.88, 0, 0) });
+  }
+  const cwGeo = mergeParts(cwStripe);
+  const cwItems = [];
+  const SIG = data.signals;
+  for (let i = 0; i < SIG.length; i += 2) {
+    const road = nearestRoad(refs, SIG[i], SIG[i + 1]);
+    if (!road || road.d > 25) continue;
+    cwItems.push({
+      x: road.px, y: road.y + 0.045, z: road.pz, ry: road.dir,
+      sx: 1, sy: 1, sz: road.w + 1.5, c: [0.88, 0.88, 0.85],
+    });
+  }
+  if (cwItems.length) group.add(makeInstanced(cwGeo, cwItems, env));
+
+  // bus shelters at real bus stops, aligned to the nearest road
+  const shelterGeo = mergeParts([
+    { geo: new THREE.BoxGeometry(3.1, 0.12, 1.5), mat4: M(0, 2.45, 0), c: [0.85, 0.4, 0.15] },
+    { geo: new THREE.CylinderGeometry(0.05, 0.05, 2.4, 4, 1, true), mat4: M(-1.4, 1.22, -0.6) },
+    { geo: new THREE.CylinderGeometry(0.05, 0.05, 2.4, 4, 1, true), mat4: M(1.4, 1.22, -0.6) },
+    { geo: new THREE.BoxGeometry(3.1, 1.5, 0.06), mat4: M(0, 1.35, -0.68), c: [0.7, 0.78, 0.82] },
+    { geo: new THREE.BoxGeometry(2.6, 0.06, 0.4), mat4: M(0, 0.55, -0.35) },
+  ]);
+  const busItems = [];
+  const BUS = data.busstops || new Float32Array(0);
+  for (let i = 0; i < BUS.length; i += 2) {
+    const road = nearestRoad(refs, BUS[i], BUS[i + 1]);
+    const ry = road && road.d < 30 ? road.dir : rng() * 6.28;
+    busItems.push({ x: BUS[i], y: 0.16, z: BUS[i + 1], ry, c: [0.55, 0.57, 0.6] });
+  }
+  if (busItems.length) group.add(makeInstanced(shelterGeo, busItems, env));
+
+  // benches (real OSM)
+  const benchGeo = mergeParts([
+    { geo: new THREE.BoxGeometry(1.7, 0.07, 0.45), mat4: M(0, 0.46, 0) },
+    { geo: new THREE.BoxGeometry(1.7, 0.42, 0.06), mat4: M(0, 0.72, -0.22, 0, -0.15) },
+    { geo: new THREE.BoxGeometry(0.08, 0.45, 0.4), mat4: M(-0.72, 0.22, 0) },
+    { geo: new THREE.BoxGeometry(0.08, 0.45, 0.4), mat4: M(0.72, 0.22, 0) },
+  ]);
+  const BEN = data.benches || new Float32Array(0);
+  const benchItems = [];
+  for (let i = 0; i < BEN.length; i += 2) {
+    benchItems.push({ x: BEN[i], y: 0.16, z: BEN[i + 1], ry: rng() * 6.28, c: [0.5, 0.38, 0.26] });
+  }
+  if (benchItems.length) group.add(makeInstanced(benchGeo, benchItems, env));
+
+  // lifeguard huts: mapped ones + a procedural row along the beach
+  const hutGeo = mergeParts([
+    { geo: new THREE.CylinderGeometry(0.09, 0.09, 2.4, 4, 1, true), mat4: M(-1.1, 1.2, -1.1), c: [0.5, 0.42, 0.32] },
+    { geo: new THREE.CylinderGeometry(0.09, 0.09, 2.4, 4, 1, true), mat4: M(1.1, 1.2, -1.1), c: [0.5, 0.42, 0.32] },
+    { geo: new THREE.CylinderGeometry(0.09, 0.09, 2.4, 4, 1, true), mat4: M(-1.1, 1.2, 1.1), c: [0.5, 0.42, 0.32] },
+    { geo: new THREE.CylinderGeometry(0.09, 0.09, 2.4, 4, 1, true), mat4: M(1.1, 1.2, 1.1), c: [0.5, 0.42, 0.32] },
+    { geo: new THREE.BoxGeometry(2.9, 1.9, 2.9), mat4: M(0, 3.3, 0) },
+    { geo: new THREE.BoxGeometry(3.5, 0.14, 3.5), mat4: M(0, 4.4, 0), c: [0.75, 0.2, 0.15] },
+    { geo: new THREE.BoxGeometry(1.1, 0.9, 2.94), mat4: M(-0.9, 2.8, 0), c: [0.75, 0.2, 0.15] },
+  ]);
+  const hutItems = [];
+  const LG = data.lifeguards || new Float32Array(0);
+  for (let i = 0; i < LG.length; i += 2) {
+    hutItems.push({ x: LG[i], y: 0.1, z: LG[i + 1], ry: rng() * 6.28, c: [0.93, 0.9, 0.85] });
+  }
+  if (refs.coastLine) {
+    const line = refs.coastLine;
+    let acc = 0;
+    for (let i = 1; i < line.length / 2; i++) {
+      const x0 = line[(i - 1) * 2], z0 = line[(i - 1) * 2 + 1];
+      const x1 = line[i * 2], z1 = line[i * 2 + 1];
+      const L = Math.hypot(x1 - x0, z1 - z0);
+      let t = 175 - acc;
+      while (t < L) {
+        const px = x0 + (x1 - x0) * (t / L), pz = z0 + (z1 - z0) * (t / L);
+        let nx = -(z1 - z0) / L, nz = (x1 - x0) / L;
+        if (data.sea && pointInRing(data.sea, px + nx * 15, pz + nz * 15)) { nx = -nx; nz = -nz; }
+        // only where a mapped beach polygon exists
+        let onBeach = false;
+        for (const b of refs.beaches || []) {
+          if (pointInRing(b.outer, px + nx * 14, pz + nz * 14)) { onBeach = true; break; }
+        }
+        if (onBeach && rng() < 0.8) {
+          hutItems.push({ x: px + nx * 14, y: 0.1, z: pz + nz * 14, ry: Math.atan2(-nz, nx) + Math.PI, c: [0.93, 0.9, 0.85] });
+        }
+        t += 175;
+      }
+      acc = (acc + L) % 175;
+    }
+  }
+  if (hutItems.length) group.add(makeInstanced(hutGeo, hutItems, env));
+
+  // beach umbrellas
+  const umbGeo = mergeParts([
+    { geo: new THREE.CylinderGeometry(0.03, 0.04, 1.9, 4, 1, true), mat4: M(0, 0.95, 0), c: [0.75, 0.73, 0.7] },
+    { geo: new THREE.ConeGeometry(1.35, 0.5, 7, 1, true), mat4: M(0, 1.95, 0) },
+  ]);
+  const UMB_COL = ['#d94f3d', '#e8963c', '#2fa8b5', '#e8d44c', '#f0ece2', '#5a8fd4'].map((h) => new THREE.Color(h).toArray());
+  const umbItems = [];
+  for (const b of refs.beaches || []) {
+    if (umbItems.length > 2600) break;
+    const bb = [1e9, 1e9, -1e9, -1e9];
+    for (let i = 0; i < b.outer.length; i += 2) {
+      bb[0] = Math.min(bb[0], b.outer[i]); bb[1] = Math.min(bb[1], b.outer[i + 1]);
+      bb[2] = Math.max(bb[2], b.outer[i]); bb[3] = Math.max(bb[3], b.outer[i + 1]);
+    }
+    for (let x = bb[0]; x < bb[2]; x += 11) {
+      for (let z = bb[1]; z < bb[3]; z += 11) {
+        if (rng() > 0.3) continue;
+        const px = x + (rng() - 0.5) * 7, pz = z + (rng() - 0.5) * 7;
+        if (!pointInRing(b.outer, px, pz)) continue;
+        umbItems.push({ x: px, y: 0.12, z: pz, ry: rng() * 6.28, s: 0.85 + rng() * 0.35, c: UMB_COL[(rng() * UMB_COL.length) | 0] });
+      }
+    }
+  }
+  if (umbItems.length) group.add(makeInstanced(umbGeo, umbItems, env));
+
+  scene.add(group);
+  return {
+    group,
+    counts: {
+      balconies: balItems.length, antennas: antItems.length, crosswalks: cwItems.length,
+      shelters: busItems.length, benches: benchItems.length, huts: hutItems.length, umbrellas: umbItems.length,
+    },
+  };
+}
+
 const CAR_COLORS = ['#e8e8e8', '#d0d0d0', '#b8bcc0', '#3a3d42', '#606468', '#8f9296',
   '#ffffff', '#c0392b', '#2c5f8a', '#7a6a52', '#e8e8e8', '#f0f0f0'].map((h) => new THREE.Color(h).toArray());
+const PED_COLORS = ['#d95f4c', '#3f6fb5', '#e8e4da', '#48484c', '#69a05c', '#e0b13e',
+  '#b46fc4', '#5cc2c9', '#f0f0f0', '#8a6a4f'].map((h) => new THREE.Color(h).toArray());
 
 export function makeTraffic(refs, env, scene) {
   const rng = mulberry32(424242);
@@ -322,6 +475,29 @@ export function makeTraffic(refs, env, scene) {
       });
     }
   }
+  // pedestrians on footways
+  const peds = [];
+  for (const p of refs.pedPaths) {
+    const n = Math.min(4, Math.floor(p.len / 130));
+    for (let k = 0; k < n && peds.length < 900; k++) {
+      peds.push({
+        p, s: rng() * p.len, dir: rng() < 0.5 ? 1 : -1,
+        v: 1.0 + rng() * 0.8, lane: (rng() - 0.5) * 1.6, seg: 0,
+        ci: (rng() * PED_COLORS.length) | 0,
+      });
+    }
+  }
+  // trains on the longest rail lines
+  const trains = [];
+  const rails = [...refs.railPaths].sort((a, b) => b.len - a.len).slice(0, 3);
+  for (const p of rails) {
+    for (const dir of [1, -1]) {
+      const s0 = rng() * p.len;
+      for (let c = 0; c < 4; c++) {
+        trains.push({ p, s: s0 - c * 19.5 * dir, dir, v: 19, lane: dir * 2.1, seg: 0, ci: 0 });
+      }
+    }
+  }
 
   const carGeo = mergeParts([
     { geo: new THREE.BoxGeometry(4.2, 0.95, 1.8), mat4: M(0, 0.65, 0) },
@@ -336,23 +512,34 @@ export function makeTraffic(refs, env, scene) {
     { geo: new THREE.BoxGeometry(0.12, 0.3, 0.5), mat4: M(5.42, 0.8, 0.75), e: 3 },
     { geo: new THREE.BoxGeometry(0.12, 0.3, 0.5), mat4: M(5.42, 0.8, -0.75), e: 3 },
   ]);
+  const pedGeo = mergeParts([
+    { geo: new THREE.CylinderGeometry(0.16, 0.22, 1.05, 5, 1, true), mat4: M(0, 0.68, 0) },
+    { geo: new THREE.SphereGeometry(0.15, 5, 4), mat4: M(0, 1.45, 0), c: [0.85, 0.66, 0.52] },
+  ]);
+  const trainGeo = mergeParts([
+    { geo: new THREE.BoxGeometry(18.6, 3.3, 3.0), mat4: M(0, 2.0, 0) },
+    { geo: new THREE.BoxGeometry(18.6, 0.7, 3.04), mat4: M(0, 1.2, 0), c: [0.75, 0.15, 0.12] },
+    { geo: new THREE.BoxGeometry(0.2, 0.5, 1.6), mat4: M(9.35, 1.2, 0), e: 3 },
+  ]);
 
   const group = new THREE.Group();
-  const carMesh = new THREE.InstancedMesh(carGeo, instancedMaterial(env), cars.length);
-  const busMesh = new THREE.InstancedMesh(busGeo, instancedMaterial(env), buses.length);
-  const carCols = new Float32Array(cars.length * 3);
-  cars.forEach((c, i) => { const cc = CAR_COLORS[c.ci]; carCols.set(cc, i * 3); });
-  carGeo.setAttribute('aInstColor', new THREE.InstancedBufferAttribute(carCols, 3));
-  const busCols = new Float32Array(buses.length * 3);
-  buses.forEach((b, i) => busCols.set([0.16, 0.5, 0.3], i * 3));
-  busGeo.setAttribute('aInstColor', new THREE.InstancedBufferAttribute(busCols, 3));
-  carMesh.frustumCulled = false;
-  busMesh.frustumCulled = false;
-  group.add(carMesh, busMesh);
+  const mk = (geo, list, colFn) => {
+    const mesh = new THREE.InstancedMesh(geo, instancedMaterial(env), list.length);
+    const cols = new Float32Array(list.length * 3);
+    list.forEach((c, i) => cols.set(colFn(c), i * 3));
+    geo.setAttribute('aInstColor', new THREE.InstancedBufferAttribute(cols, 3));
+    mesh.frustumCulled = false;
+    group.add(mesh);
+    return mesh;
+  };
+  const carMesh = mk(carGeo, cars, (c) => CAR_COLORS[c.ci]);
+  const busMesh = mk(busGeo, buses, () => [0.16, 0.5, 0.3]);
+  const pedMesh = mk(pedGeo, peds, (c) => PED_COLORS[c.ci]);
+  const trainMesh = mk(trainGeo, trains, () => [0.82, 0.83, 0.85]);
   scene.add(group);
 
   const m = new THREE.Matrix4();
-  function place(list, mesh, dt) {
+  function place(list, mesh, dt, yOff) {
     for (let i = 0; i < list.length; i++) {
       const c = list[i];
       const P = c.p;
@@ -370,11 +557,11 @@ export function makeTraffic(refs, env, scene) {
       const dx = (pts[(seg + 1) * 2] - x0) * c.dir, dz = (pts[(seg + 1) * 2 + 1] - z0) * c.dir;
       const L2 = Math.hypot(dx, dz) || 1;
       const fx = dx / L2, fz = dz / L2;
-      const rx = -fz, rz = fx; // right side of travel
+      const rx = -fz, rz = fx;
       const px = x0 + (pts[(seg + 1) * 2] - x0) * t + rx * c.lane;
       const pz = z0 + (pts[(seg + 1) * 2 + 1] - z0) * t + rz * c.lane;
       m.makeRotationY(Math.atan2(-fz, fx));
-      m.setPosition(px, P.y + 0.15, pz);
+      m.setPosition(px, P.y + yOff, pz);
       mesh.setMatrixAt(i, m);
     }
     mesh.instanceMatrix.needsUpdate = true;
@@ -382,7 +569,14 @@ export function makeTraffic(refs, env, scene) {
   return {
     group,
     count: cars.length + buses.length,
-    update(dt) { place(cars, carMesh, dt); place(buses, busMesh, dt); },
+    pedCount: peds.length,
+    trainCount: trains.length,
+    update(dt) {
+      place(cars, carMesh, dt, 0.15);
+      place(buses, busMesh, dt, 0.15);
+      place(peds, pedMesh, dt, 0.12);
+      place(trains, trainMesh, dt, 0.1);
+    },
   };
 }
 
@@ -395,20 +589,17 @@ export function makeBoats(env, scene, lonlatToLocal, meta, seaRing) {
       spots.push({ x: cx + (rng() - 0.5) * spread, z: cz + (rng() - 0.5) * spread, ry: rng() * 6.28, s: 0.7 + rng() * 0.9 });
     }
   };
-  add(34.7655, 32.0873, 26, 220);   // marina
-  add(34.7509, 32.0532, 12, 160);   // Jaffa port
-  add(34.7692, 32.0965, 8, 200);    // TLV port
-  // offshore sails
+  add(34.7655, 32.0873, 26, 220);
+  add(34.7509, 32.0532, 12, 160);
+  add(34.7692, 32.0965, 8, 200);
   for (let i = 0; i < 14; i++) {
-    const x = -3800 - rng() * 2600;
-    const z = -6000 + rng() * 11000;
-    spots.push({ x, z, ry: rng() * 6.28, s: 0.8 + rng() * 0.7 });
+    spots.push({ x: -3800 - rng() * 2600, z: -6000 + rng() * 11000, ry: rng() * 6.28, s: 0.8 + rng() * 0.7 });
   }
   const kept = seaRing ? spots.filter((s) => pointInRing(seaRing, s.x, s.z)) : spots;
   const boatGeo = mergeParts([
     { geo: new THREE.BoxGeometry(4.6, 0.75, 1.55), mat4: M(0, 0.28, 0) },
     { geo: new THREE.BoxGeometry(1.6, 0.7, 1.1), mat4: M(-0.4, 0.95, 0) },
-    { geo: new THREE.CylinderGeometry(0.035, 0.05, 4.6, 4), mat4: M(0.5, 2.6, 0) },
+    { geo: new THREE.CylinderGeometry(0.035, 0.05, 4.6, 4, 1, true), mat4: M(0.5, 2.6, 0), c: [0.55, 0.5, 0.45] },
   ]);
   const items = kept.map((s, i) => ({
     x: s.x, y: -0.3, z: s.z, ry: s.ry, s: s.s,

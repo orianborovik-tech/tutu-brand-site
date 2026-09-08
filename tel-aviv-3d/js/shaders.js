@@ -114,16 +114,30 @@ export function buildingsMaterial(env) {
         float camDist = length(uCamPos - vWorld);
         float dayWinFade = 1.0 - smoothstep(500.0, 1400.0, camDist);
         float emitFade = 1.0 - smoothstep(3000.0, 10000.0, camDist) * 0.8;
+        float comm = step(0.5, mod(floor(vFlags / 2.0), 2.0));
         if (wall) {
+          float roofLine = vUv.y;
+          float belowRoof = step(vWorld.y, roofLine - 0.45);
           vec2 cell = vec2(vUv.x / 3.35, vWorld.y / 3.02);
           vec2 f = fract(cell);
           vec2 id = floor(cell);
-          float inWin = step(0.16, f.x) * step(f.x, 0.80) * step(0.22, f.y) * step(f.y, 0.78);
+          float inWin = step(0.16, f.x) * step(f.x, 0.80) * step(0.22, f.y) * step(f.y, 0.78) * belowRoof;
           float rnd = hash12(id * 1.03 + vec2(vId * 0.719, vId * 0.133));
-          col = mix(col, col * vec3(0.60, 0.65, 0.74), inWin * (0.5 + 0.3 * glass) * dayWinFade);
+          col = mix(col, col * vec3(0.52, 0.58, 0.68), inWin * (0.62 + 0.25 * glass) * dayWinFade);
           float lit = step(rnd, uWindowLitFrac + glass * 0.25) * inWin;
           vec3 warm = mix(vec3(1.0, 0.82, 0.5), vec3(0.72, 0.83, 1.0), step(0.86, fract(rnd * 9.0)));
           emit = lit * uNight * warm * (0.55 + 0.75 * fract(rnd * 13.0)) * emitFade;
+          // floor separation line on plastered facades
+          col *= 1.0 - (1.0 - glass) * belowRoof * dayWinFade * 0.07 * (1.0 - step(0.075, fract(vWorld.y / 3.02)));
+          // commercial ground floor: storefront glazing with pillars
+          float gf = step(vWorld.y, 3.5) * comm * dayWinFade;
+          float pillar = step(fract(vUv.x / 4.8), 0.10);
+          col = mix(col, col * vec3(0.34, 0.38, 0.44), gf * (1.0 - pillar) * 0.8);
+          float shopRnd = hash12(vec2(floor(vUv.x / 4.8), vId));
+          emit += gf * (1.0 - pillar) * uNight * step(shopRnd, 0.7) * vec3(1.0, 0.9, 0.65) * 1.1 * emitFade;
+          // residential entrance door
+          float door = step(fract(vUv.x / 11.0 + 0.31), 0.115) * step(vWorld.y, 2.45) * (1.0 - comm) * dayWinFade;
+          col = mix(col, col * 0.45, door);
         }
         vec3 V = normalize(uCamPos - vWorld);
         float fres = pow(1.0 - abs(dot(N, V)), 3.0);
@@ -135,7 +149,11 @@ export function buildingsMaterial(env) {
         vec3 hemi = mix(uAmbGround, uAmbSky, N.y * 0.5 + 0.5);
         float ao = clamp(vWorld.y / 7.0, 0.0, 1.0) * 0.30 + 0.70;
         float sunScale = mix(1.0, 0.62, clamp(N.y, 0.0, 1.0));
-        vec3 outCol = col * (uSunColor * lam * sunScale + hemi * 1.05) * ao + emit;
+        vec3 light = uSunColor * lam * sunScale + hemi * 1.05;
+        // cap facade luminance so window/balcony contrast survives noon sun
+        float lmax = max(light.r, max(light.g, light.b));
+        light /= max(1.0, lmax / 1.12);
+        vec3 outCol = col * light * ao + emit;
         gl_FragColor = vec4(applyFog(outCol, camDist), 1.0);
       }`,
   });
@@ -166,6 +184,58 @@ export function flatMaterial(env) {
         vec3 light = uSunColor * 0.38 * max(uSunDir.y, 0.0) + mix(uAmbGround, uAmbSky, 1.0) * 0.85;
         vec3 outCol = col * light;
         gl_FragColor = vec4(applyFog(outCol, length(uCamPos - vWorld)), 1.0);
+      }`,
+  });
+}
+
+// ------------------------------------------------------------------- roads --
+export function roadsMaterial(env) {
+  return SM({
+    uniforms: env,
+    side: THREE.DoubleSide,
+    vertexShader: `
+      attribute vec3 color;
+      attribute float aFlags;
+      varying vec3 vColor;
+      varying vec3 vWorld;
+      varying vec2 vUv;
+      varying float vCls;
+      void main() {
+        vColor = color;
+        vWorld = position;
+        vUv = uv;
+        vCls = aFlags;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `
+      uniform vec3 uSunDir, uSunColor, uAmbSky, uAmbGround, uCamPos;
+      uniform float uNight;
+      varying vec3 vColor;
+      varying vec3 vWorld;
+      varying vec2 vUv;
+      varying float vCls;
+      ${FOG_GLSL}
+      void main() {
+        float n = hash12(floor(vWorld.xz * 0.55)) * 0.06 - 0.03;
+        vec3 col = vColor * (1.0 + n);
+        float dist = length(uCamPos - vWorld);
+        float markFade = 1.0 - smoothstep(1200.0, 3200.0, dist);
+        if (markFade > 0.01 && vCls < 4.5) {
+          float dash = step(fract(vUv.x / 11.0), 0.5);
+          vec3 mark = vec3(0.85, 0.85, 0.8);
+          if (vCls < 0.5) {
+            // motorway: two lane dashes + solid edge lines
+            float lanes = dash * (step(abs(vUv.y - 0.45), 0.022) + step(abs(vUv.y + 0.45), 0.022));
+            float edges = step(0.94, abs(vUv.y));
+            col = mix(col, mark, (lanes * 0.5 + edges * 0.4) * markFade);
+          } else {
+            float center = step(abs(vUv.y), 0.028) * dash;
+            col = mix(col, mark, center * 0.45 * markFade);
+          }
+        }
+        vec3 light = uSunColor * 0.38 * max(uSunDir.y, 0.0) + mix(uAmbGround, uAmbSky, 1.0) * 0.85;
+        vec3 outCol = col * light;
+        gl_FragColor = vec4(applyFog(outCol, dist), 1.0);
       }`,
   });
 }
@@ -304,13 +374,14 @@ export function instancedMaterial(env, opts = {}) {
     uniforms: { ...env, uEmColor: { value: new THREE.Color(opts.emColor || '#ffc27d') } },
     vertexShader: `
       attribute vec3 aInstColor;
+      attribute vec3 aVCol;
       attribute float aEm;
       varying vec3 vColor;
       varying vec3 vNormalW;
       varying vec3 vWorld;
       varying float vEm;
       void main() {
-        vColor = aInstColor;
+        vColor = aInstColor * aVCol;
         vEm = aEm;
         mat4 im = instanceMatrix;
         vec4 wp = im * vec4(position, 1.0);

@@ -60,7 +60,7 @@ function parse(buf) {
   const meta = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, r.o, metaLen)));
   r.o += metaLen;
 
-  const D = { meta, buildings: [], roads: [], areas: [], trees: null, lamps: null, signals: null, sea: null };
+  const D = { meta, buildings: [], roads: [], areas: [], trees: null, lamps: null, signals: null, busstops: null, benches: null, lifeguards: null, sea: null };
 
   while (r.o < buf.byteLength) {
     const sid = r.u8();
@@ -71,6 +71,7 @@ function parse(buf) {
       for (let i = 0; i < count; i++) {
         const part = r.u8(), ty = r.u8(), h = r.u16() * 0.1, mh = r.u16() * 0.1;
         const nm = r.u16(), col = r.u8();
+        const rsh = r.u8(), rh = r.u8() * 0.1;
         r.u8(); // total rings (unused)
         const nOut = r.u8();
         const outers = [];
@@ -81,7 +82,7 @@ function parse(buf) {
           for (let j = 0; j < nIn; j++) inners.push(readRing(r));
           outers.push({ outer, inners });
         }
-        D.buildings.push({ part, ty, h, mh, nm, col, outers });
+        D.buildings.push({ part, ty, h, mh, nm, col, rsh, rh, outers });
       }
     } else if (sid === 2) {
       const count = r.u32();
@@ -107,6 +108,9 @@ function parse(buf) {
     } else if (sid === 4) D.trees = readPoints(r);
     else if (sid === 5) D.lamps = readPoints(r);
     else if (sid === 6) D.signals = readPoints(r);
+    else if (sid === 8) D.busstops = readPoints(r);
+    else if (sid === 9) D.benches = readPoints(r);
+    else if (sid === 10) D.lifeguards = readPoints(r);
     else if (sid === 7) { const c = r.u32(); if (c > 0) D.sea = readRing(r); }
     r.o = end;
   }
