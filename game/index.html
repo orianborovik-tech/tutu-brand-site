@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tutu Expedition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+  :root {
+    --void: #070a08;
+    --void-80: rgba(7, 10, 8, 0.8);
+    --void-55: rgba(7, 10, 8, 0.55);
+    --aurora: #5cf58a;
+    --gold: #e8b643;
+    --ember: #ff6a1f;
+    --dust: #d9cfb0;
+    --dust-70: rgba(217, 207, 176, 0.7);
+    --stone: #8f948c;
+    --line: rgba(217, 207, 176, 0.22);
+    --display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--void); color: var(--dust); font-family: var(--sans); overflow: hidden; -webkit-font-smoothing: antialiased; }
+  #app { position: fixed; inset: 0; }
+  #view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+  /* ---------- HUD ---------- */
+  .hud { position: absolute; inset: 0; pointer-events: none; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .hud > * { position: absolute; }
+  .eyebrow { font: 500 11px/1 var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--dust-70); }
+  .hud-top-left { top: max(16px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); display: grid; gap: 6px; }
+  .mission { font: 900 34px/1 var(--display); color: var(--dust); letter-spacing: 0.02em; }
+  .mission .of { color: var(--stone); font-weight: 700; margin-left: 4px; }
+  .mission .lbl { font: 500 11px var(--mono); letter-spacing: 0.16em; color: var(--stone); text-transform: uppercase; margin-left: 10px; }
+  .timer { font: 500 14px var(--mono); color: var(--dust-70); }
+  .phase { font: 500 11px var(--mono); letter-spacing: 0.16em; color: var(--gold); }
+
+  .hud-top-center { top: max(16px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); text-align: center; display: grid; justify-items: center; gap: 4px; }
+  .arrow { display: inline-block; width: 26px; height: 26px; color: var(--gold); transition: transform 120ms linear; font-size: 22px; line-height: 26px; }
+  .objective { display: flex; align-items: center; gap: 10px; padding: 6px 12px; border: 1px solid var(--line); background: var(--void-55); backdrop-filter: blur(6px); }
+  .objective #objName { font: 700 15px var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--dust); }
+  .objective #objDist { font: 500 13px var(--mono); color: var(--aurora); min-width: 4ch; text-align: right; }
+
+  .hud-bottom-left { left: max(16px, env(safe-area-inset-left)); bottom: max(16px, env(safe-area-inset-bottom)); display: grid; gap: 8px; }
+  .speed { display: flex; align-items: baseline; gap: 8px; }
+  .speed #speed { font: 900 64px/0.9 var(--display); color: var(--dust); min-width: 2ch; }
+  .speed .unit { font: 500 12px var(--mono); letter-spacing: 0.16em; color: var(--stone); }
+  .throttle-bar { width: 180px; height: 4px; background: var(--line); overflow: hidden; }
+  .throttle-bar i { display: block; height: 100%; background: var(--aurora); transform-origin: left; transform: scaleX(0); transition: transform 80ms linear; }
+  .readouts { display: flex; gap: 16px; font: 500 11px var(--mono); letter-spacing: 0.14em; color: var(--dust-70); }
+  .readouts #gear { color: var(--gold); }
+
+  .hud-bottom-right { right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); }
+  #radar { width: 180px; height: 180px; border-radius: 50%; box-shadow: 0 0 0 1px var(--line), 0 12px 40px rgba(0,0,0,0.5); background: var(--void); }
+  .hud-buttons { top: max(16px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); display: flex; gap: 8px; pointer-events: auto; }
+  .hud-buttons button { font: 500 11px var(--mono); letter-spacing: 0.14em; color: var(--dust-70); background: var(--void-55); border: 1px solid var(--line); padding: 8px 10px; cursor: pointer; }
+  .hud-buttons button:hover, .hud-buttons button:focus-visible { color: var(--dust); border-color: var(--dust-70); outline: none; }
+
+  .toast { left: 50%; bottom: 22%; transform: translate(-50%, 10px); padding: 10px 18px; border-left: 3px solid var(--gold); background: var(--void-80); color: var(--dust); font: 500 14px var(--mono); opacity: 0; transition: opacity 250ms ease-out, transform 250ms ease-out; white-space: nowrap; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; }
+  .toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+  .toast.pickup { border-color: var(--gold); }
+  .toast.phase { border-color: var(--aurora); }
+  .toast.info { border-color: var(--stone); }
+
+  /* touch controls: only for coarse pointers */
+  .touch { display: none; inset: auto 0 0 0; padding: 0 16px max(16px, env(safe-area-inset-bottom)); justify-content: space-between; align-items: flex-end; pointer-events: none; }
+  .touch > div { display: flex; gap: 12px; pointer-events: auto; }
+  .touch button { width: 64px; height: 64px; border-radius: 50%; border: 1px solid var(--line); background: var(--void-55); color: var(--dust); font: 700 22px var(--mono); touch-action: none; user-select: none; -webkit-user-select: none; }
+  .touch button.is-down { background: rgba(92, 245, 138, 0.25); border-color: var(--aurora); }
+  @media (pointer: coarse) {
+    .touch { display: flex; }
+    .touch button { width: 58px; height: 58px; }
+    .touch > div { gap: 10px; }
+    .hud-bottom-left { bottom: 96px; }
+    .hud-bottom-right { bottom: 96px; }
+    #radar { width: 120px; height: 120px; }
+    .speed #speed { font-size: 48px; }
+    .throttle-bar { width: 120px; }
+  }
+
+  /* ---------- screens ---------- */
+  .screen { position: absolute; inset: 0; display: grid; align-content: end; padding: 24px; padding-block: 24px 40px; background: linear-gradient(90deg, rgba(7,10,8,0.88) 0%, rgba(7,10,8,0.55) 55%, rgba(7,10,8,0.15) 100%); z-index: 20; }
+  .brief { max-width: 560px; display: grid; gap: 16px; }
+  .brief h1 { font: 900 clamp(48px, 9vw, 92px)/0.9 var(--display); letter-spacing: -0.01em; margin: 0; color: var(--dust); text-wrap: balance; text-transform: uppercase; }
+  .brief p { font: 400 16px/1.55 var(--sans); color: var(--dust); margin: 0; max-width: 60ch; }
+  .brief .zones { color: var(--gold); }
+  .controls { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 18px; font: 400 12px var(--mono); color: var(--dust-70); }
+  .controls b { color: var(--dust); font-weight: 500; }
+  .cta { justify-self: start; font: 700 18px var(--display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--void); background: var(--gold); border: 0; padding: 14px 26px; cursor: pointer; }
+  .cta:hover, .cta:focus-visible { background: #f2c85a; outline: none; box-shadow: 0 0 0 3px rgba(232,182,67,0.35); }
+  .loading { font: 500 12px var(--mono); letter-spacing: 0.14em; color: var(--stone); text-transform: uppercase; }
+  .stats { display: grid; gap: 0; border-top: 1px solid var(--line); }
+  .stat { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--line); font: 500 14px var(--mono); }
+  .stat-k { color: var(--dust-70); }
+  .stat-v { color: var(--gold); font-variant-numeric: tabular-nums; }
+  @media (max-width: 640px) {
+    .screen { background: linear-gradient(180deg, rgba(7,10,8,0.2) 0%, rgba(7,10,8,0.85) 45%, rgba(7,10,8,0.95) 100%); }
+    .hud-top-left .eyebrow { display: none; }
+    .mission { font-size: 28px; }
+    .hud-top-center { top: 112px; }
+    .hud-buttons { flex-direction: column; align-items: flex-end; gap: 6px; }
+    .hud-buttons button { padding: 6px 8px; font-size: 10px; }
+    .readouts { gap: 10px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .toast, .arrow, .throttle-bar i { transition: none; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="view"></canvas>
+
+  <div id="hud" class="hud" hidden>
+    <div class="hud-top-left">
+      <div class="eyebrow">Tutu Expedition · Survey 07</div>
+      <div class="mission"><span id="samples">0</span><span class="of">/ <span id="samplesTotal">8</span></span><span class="lbl">samples</span></div>
+      <div class="timer" id="timer">00:00.0</div>
+      <div class="phase" id="phaseLbl">RECOVER SAMPLES</div>
+    </div>
+    <div class="hud-top-center">
+      <span class="arrow" id="objArrow" aria-hidden="true">&#9650;</span>
+      <div class="objective"><span id="objName">—</span><span id="objDist">0 m</span></div>
+    </div>
+    <div class="hud-buttons">
+      <button type="button" id="camBtn" data-tap="camera">CAM · CHASE</button>
+      <button type="button" id="muteBtn" data-tap="mute">SOUND ON</button>
+      <button type="button" id="resetBtn" data-tap="reset">RESET</button>
+      <button type="button" id="pauseBtn" data-tap="pause">PAUSE</button>
+    </div>
+    <div class="hud-bottom-left">
+      <div class="speed"><span id="speed">0</span><span class="unit">km/h</span></div>
+      <div class="throttle-bar"><i id="throttleFill"></i></div>
+      <div class="readouts"><span id="gear">DRV</span><span id="grip">GRIP 100%</span><span id="clock">16:00</span></div>
+    </div>
+    <div class="hud-bottom-right"><canvas id="radar" width="360" height="360" aria-label="Radar"></canvas></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="touch">
+      <div><button type="button" data-hold="left" aria-label="Steer left">&#9664;</button><button type="button" data-hold="right" aria-label="Steer right">&#9654;</button></div>
+      <div><button type="button" data-hold="brake" aria-label="Brake">&#9632;</button><button type="button" data-hold="down" aria-label="Reverse">&#9660;</button><button type="button" data-hold="up" aria-label="Accelerate">&#9650;</button></div>
+    </div>
+  </div>
+
+  <section id="start" class="screen" aria-label="Mission brief">
+    <div class="brief">
+      <div class="eyebrow">Tutu Expedition</div>
+      <h1 id="startTitle">Survey Unit 07</h1>
+      <p>Eight mineral samples are scattered across the survey zones: <span class="zones">the Nested Crater, the Hexfield, Fracture Ground, the Spire City, the Smoke Array, the Cosmic Seam, the Gilded Canyon and the dune ridge</span>. Recover all eight and bring them back to the Compound before the aurora fades.</p>
+      <ul class="controls">
+        <li><b>W A S D</b> / arrows — drive</li>
+        <li><b>Space</b> — brake</li>
+        <li><b>R</b> — right the rover</li>
+        <li><b>C</b> — camera</li>
+        <li><b>M</b> — sound</li>
+        <li><b>Esc</b> — pause · gamepad supported</li>
+      </ul>
+      <button type="button" id="startBtn" class="cta">Start expedition</button>
+      <div class="loading" id="loading">Loading planet…</div>
+    </div>
+  </section>
+
+  <section id="end" class="screen" hidden aria-label="Expedition debrief">
+    <div class="brief">
+      <div class="eyebrow">Tutu Expedition</div>
+      <h1>Expedition complete</h1>
+      <p>All samples are back at the Compound. Survey Unit 07 is cleared for the next run.</p>
+      <div class="stats" id="endStats"></div>
+      <button type="button" id="restartBtn" class="cta">Run again</button>
+    </div>
+  </section>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+    "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
+  }
+}
+</script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
