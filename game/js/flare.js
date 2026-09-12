@@ -23,7 +23,7 @@ export function createSunFlare(scene) {
   const ghost = discTexture(128, [[0, 'rgba(255,255,255,0.4)'], [0.5, 'rgba(255,255,255,0.16)'], [0.95, 'rgba(255,255,255,0.04)'], [1, 'rgba(255,255,255,0)']]);
   // [texture, screen-height fraction, position along the axis (0 = sun, 1 = opposite), colour, opacity]
   const defs = [
-    [core, 0.95, 0, '#ffd9a0', 0.9],
+    [core, 0.55, 0, '#ffd9a0', 0.5],
     [ghost, 0.10, 0.45, '#5cf58a', 0.35],
     [ghost, 0.16, 0.62, '#e8b643', 0.3],
     [ring, 0.26, 0.8, '#ff9a4a', 0.35],

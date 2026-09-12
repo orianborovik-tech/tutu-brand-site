@@ -220,7 +220,7 @@ export function createTerrain(scene, normalMap) {
         float coreM = 1.0 - smoothstep(4.0, 22.0, dcr);
         totalEmissiveRadiance += vec3(1.0, 0.62, 0.2) * coreM * coreM * 3.0 * (0.85 + 0.15 * sin(uTime * 0.7));
         float ring = pow(0.5 + 0.5 * sin(dcr * 0.55), 14.0) * (1.0 - smoothstep(30.0, 62.0, dcr)) * smoothstep(8.0, 20.0, dcr);
-        totalEmissiveRadiance += vec3(1.0, 0.7, 0.3) * ring * 0.7;
+        totalEmissiveRadiance += vec3(1.0, 0.7, 0.3) * ring * 0.22;
       `);
   };
   material.customProgramCacheKey = () => 'tutu-terrain';
