@@ -206,9 +206,9 @@ export function createTerrain(scene, normalMap) {
         float hexM = rmask(uHex, wp, 24.0);
         if (hexM > 0.001) {
           float e = hexEdgeGL(wp, ${HEX_SIZE.toFixed(1)});
-          float seam = 1.0 - smoothstep(0.05, 0.6, e);
+          float seam = 1.0 - smoothstep(0.03, 0.42, e);
           float pulse = 0.75 + 0.25 * sin(uTime * 0.9 + wp.x * 0.05 + wp.y * 0.07);
-          totalEmissiveRadiance += vec3(1.0, 0.55, 0.12) * seam * hexM * 2.4 * pulse;
+          totalEmissiveRadiance += vec3(1.0, 0.55, 0.12) * seam * hexM * 1.5 * pulse;
         }
         if (lavaM > 0.001) {
           float r = tridged(wp * 0.045 + vec2(9.0, -4.0));

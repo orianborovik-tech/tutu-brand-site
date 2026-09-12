@@ -92,6 +92,8 @@
   .brief .zones { color: var(--gold); }
   .controls { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 18px; font: 400 12px var(--mono); color: var(--dust-70); }
   .controls b { color: var(--dust); font-weight: 500; }
+  .controls.touch-help { display: none; }
+  @media (pointer: coarse) { .controls.touch-help { display: grid; } .controls.kb { display: none; } }
   .cta { justify-self: start; font: 700 18px var(--display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--void); background: var(--gold); border: 0; padding: 14px 26px; cursor: pointer; }
   .cta:hover, .cta:focus-visible { background: #f2c85a; outline: none; box-shadow: 0 0 0 3px rgba(232,182,67,0.35); }
   .loading { font: 500 12px var(--mono); letter-spacing: 0.14em; color: var(--stone); text-transform: uppercase; }
@@ -150,7 +152,12 @@
       <div class="eyebrow">Tutu Expedition</div>
       <h1 id="startTitle">Survey Unit 07</h1>
       <p>Eight mineral samples are scattered across the survey zones: <span class="zones">the Nested Crater, the Hexfield, Fracture Ground, the Spire City, the Smoke Array, the Cosmic Seam, the Gilded Canyon and the dune ridge</span>. Recover all eight and bring them back to the Compound before the aurora fades.</p>
-      <ul class="controls">
+      <ul class="controls touch-help">
+        <li><b>&#9664; &#9654;</b> — steer</li>
+        <li><b>&#9650; &#9660;</b> — drive / reverse</li>
+        <li><b>&#9632;</b> — brake · <b>RESET</b> — right the rover</li>
+      </ul>
+      <ul class="controls kb">
         <li><b>W A S D</b> / arrows — drive</li>
         <li><b>Space</b> — brake</li>
         <li><b>R</b> — right the rover</li>

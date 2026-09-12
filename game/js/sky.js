@@ -48,7 +48,7 @@ float curtain(vec2 dz, float y, float t, float seed) {
   float rays = pow(vnoise(dz * 34.0 + vec2(t * 0.2, seed * 7.0)), 2.5);
   float base = 0.10 + shape * 0.28;
   float env = exp(-pow((y - base) * 3.4, 2.0)) * smoothstep(0.02, 0.12, y);
-  float tail = exp(-max(y - base, 0.0) * 2.2) * step(base, y) * 0.35;
+  float tail = exp(-max(y - base, 0.0) * 2.6) * step(base, y) * 0.18;
   return band * (0.45 + 0.95 * rays) * (env + tail);
 }
 
@@ -92,8 +92,8 @@ void main() {
   if (y > 0.0) {
     float t = uTime;
     float a = curtain(dz, y, t, 0.0)
-            + 0.7 * curtain(dz * 1.5 + 2.0, y, t * 1.25, 4.0)
-            + 0.6 * curtain(dz * 0.8 - 1.5, y, t * 0.8, 8.0);
+            + 0.55 * curtain(dz * 1.5 + 2.0, y, t * 1.25, 4.0)
+            + 0.45 * curtain(dz * 0.8 - 1.5, y, t * 0.8, 8.0);
     vec3 aurCol = mix(vec3(0.30, 1.0, 0.45), vec3(0.75, 0.30, 1.0), smoothstep(0.18, 0.6, y));
     col += aurCol * a * uAurora * (0.9 + 0.3 * uNight) * 1.35;
   }

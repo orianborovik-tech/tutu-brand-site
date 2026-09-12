@@ -53,7 +53,7 @@ function makeConcreteTexture() {
   const c = document.createElement('canvas');
   c.width = 512; c.height = 256;
   const g = c.getContext('2d');
-  g.fillStyle = '#6a6c67'; g.fillRect(0, 0, 512, 256);
+  g.fillStyle = '#8e908a'; g.fillRect(0, 0, 512, 256);
   for (let i = 0; i < 4000; i++) {
     g.fillStyle = `rgba(${40 + Math.random() * 60},${40 + Math.random() * 60},${38 + Math.random() * 55},${0.12 + Math.random() * 0.2})`;
     g.fillRect(Math.random() * 512, Math.random() * 256, 2 + Math.random() * 6, 1 + Math.random() * 3);
@@ -186,6 +186,21 @@ export function createWorld(scene, physics, particles, normalMap) {
     mast.position.set(COMPOUND.x + dx, cy + 18 + h / 2, COMPOUND.z + dz);
     mast.castShadow = true; compound.add(mast);
   }
+  // lit window strips around the hull + roof vents
+  const windowMat = new THREE.MeshStandardMaterial({ color: '#2a2418', emissive: '#ffd27a', emissiveIntensity: 0.9, roughness: 0.4 });
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2;
+    const w = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.7, 0.3), windowMat);
+    w.position.set(COMPOUND.x + Math.sin(a) * 25.1, cy + 11.5, COMPOUND.z + Math.cos(a) * 25.1);
+    w.rotation.y = a;
+    compound.add(w);
+  }
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + 0.4, r = 12 + (i % 2) * 5;
+    const vent = new THREE.Mesh(new THREE.BoxGeometry(3, 2.2, 2.2), darkMetal);
+    vent.position.set(COMPOUND.x + Math.sin(a) * r, cy + 19.1, COMPOUND.z + Math.cos(a) * r);
+    vent.rotation.y = a; vent.castShadow = true; compound.add(vent);
+  }
   const beaconMat = new THREE.MeshStandardMaterial({ color: '#3a0a05', emissive: '#ff2a1a', emissiveIntensity: 3, roughness: 0.3 });
   const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 12), beaconMat);
   beacon.position.set(COMPOUND.x - 8, cy + 32.5, COMPOUND.z + 4); compound.add(beacon);
@@ -194,6 +209,7 @@ export function createWorld(scene, physics, particles, normalMap) {
   updaters.push((t, dt, night) => {
     beaconMat.emissiveIntensity = 1 + 3 * Math.max(0, Math.sin(t * 2.4));
     flood.intensity = THREE.MathUtils.smoothstep(night, 0.3, 0.7) * 500;
+    windowMat.emissiveIntensity = 0.6 + night * 1.8;
   });
 
   // ---- sample crystals + beacons -------------------------------------------
